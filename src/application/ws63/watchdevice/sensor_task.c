@@ -6,15 +6,15 @@
 #include "gpio.h"
 #include "pinctrl.h"
 #include "osal_debug.h"
-#include "MQTTClient.h"
 
-extern MQTTClient client;
+// 引入刚刚在 sle_speed_client.c 中新增的发送接口
+extern int sle_client_send_data(const char *payload, uint16_t len);
 
 static void *sensor_main_task(const char *arg)
 {
     unused(arg);
 
-    osal_msleep(3000); // 等待 MQTT 连接成功
+    osal_msleep(10000); // 刚开机等 10 秒，让底层星闪雷达扫频连接网关
 
     //while (1) {
         char payload[1024];
@@ -40,23 +40,12 @@ static void *sensor_main_task(const char *arg)
             "}"
         );
 
-        // 【改 1】结构体名改为 MQTTClient_message
-        MQTTClient_message message = MQTTClient_message_initializer;
-
-        // 【改 2】QoS 直接用 0（不是 QOS0）
-        message.qos = 0;
-        message.retained = 0;
-        message.payload = payload;
-        message.payloadlen = (int)strlen(payload);
-
-        // 【改 3】增加第 4 个参数 deliveryToken
-        MQTTClient_deliveryToken dt;
-        int rc = MQTTClient_publishMessage(client, "watch/watch_01/up", &message, &dt);
-
-        if (rc == 0) {
-            osal_printk("[MQTT] 成功发布李桂芳体检数据！\r\n");
+        // 【核心】不再发往 MQTT，而是发往星闪网关！
+        int ret = sle_client_send_data(payload, strlen(payload));
+        if (ret == 0) {
+            osal_printk("[Sensor] 成功通过星闪发送数据给网关！\r\n");
         } else {
-            osal_printk("[MQTT] 发布失败，错误码: %d\r\n", rc);
+            osal_printk("[Sensor] 发送失败，星闪可能未连接。\r\n");
         }
         
         osal_msleep(5000);

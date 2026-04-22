@@ -12,3 +12,13 @@ config ENABLE_WATCHCONTROL
 if ENABLE_WATCHCONTROL
 osource "application/ws63/watchcontrol/Kconfig"
 endif
+
+config ENABLE_WATCHDEVICE
+    bool
+    prompt "Enable watchdevice."
+    default n
+    depends on WS63_ENABLE
+
+if ENABLE_WATCHDEVICE
+osource "application/ws63/watchdevice/Kconfig"
+endif

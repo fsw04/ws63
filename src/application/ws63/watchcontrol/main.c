@@ -34,7 +34,7 @@ static void *app_main_task(const char *arg)
         mqtt_task_start();
 
         // 3. 启动传感器定时采集任务
-        sensor_task_start();
+        // sle_server_task_start();
     } else {
         osal_printk("[APP] Network Connect Failed, stop MQTT services.\r\n");
     }

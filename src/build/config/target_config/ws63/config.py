@@ -90,7 +90,7 @@ target = {
             "tiot_driver",
             "lvgl",
             "watchcontrol",
-            #"watch",
+            "watchdevice",
             "mqtt"
         ],
         'ccflags': [
