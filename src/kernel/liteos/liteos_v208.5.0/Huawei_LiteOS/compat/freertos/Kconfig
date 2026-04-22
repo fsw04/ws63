@@ -1,0 +1,13 @@
+config LOSCFG_COMPAT_FREERTOS
+    bool "Enable FreeRTOS"
+    default n
+    help
+      Answer Y to enable LiteOS support FreeRTOS interface.
+
+config LOSCFG_COMPAT_FREERTOS_HEAP
+    int "memory management method"
+    default 3
+    range 1 5
+    depends on LOSCFG_COMPAT_FREERTOS
+    help
+      The numbers correspond to different memory management methods.

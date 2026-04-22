@@ -1,0 +1,5 @@
+config LOSCFG_COMPAT_RT_THREAD
+    bool "Enable RT_Thread"
+    default n
+    help
+      Answer Y to enable LiteOS support RT_Thread interface.

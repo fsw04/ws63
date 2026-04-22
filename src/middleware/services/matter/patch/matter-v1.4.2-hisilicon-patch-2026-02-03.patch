@@ -1,0 +1,691 @@
+diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
+index d538337f51..4540b6d17a 100644
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -229,7 +229,7 @@ config("disabled_warnings") {
+   cflags = [
+     "-Wno-deprecated-declarations",
+     "-Wno-missing-field-initializers",
+-    "-Wno-unknown-warning-option",
++#    "-Wno-unknown-warning-option",
+     "-Wno-unused-parameter",
+   ]
+   if (!is_debug) {
+@@ -238,7 +238,7 @@ config("disabled_warnings") {
+   }
+   if (!is_clang) {
+     cflags += [
+-      "-Wno-cast-function-type",
++#      "-Wno-cast-function-type",
+       "-Wno-psabi",
+       "-Wno-maybe-uninitialized",
+     ]
+diff --git a/scripts/build/build/targets.py b/scripts/build/build/targets.py
+index e9961528f7..6cbf1bac06 100755
+--- a/scripts/build/build/targets.py
++++ b/scripts/build/build/targets.py
+@@ -13,6 +13,7 @@
+ # limitations under the License.
+ 
+ from builders.ameba import AmebaApp, AmebaBoard, AmebaBuilder
++from builders.hisilicon import HisiApp, HisiBoard, HisiBuilder
+ from builders.android import AndroidApp, AndroidBoard, AndroidBuilder, AndroidProfile
+ from builders.asr import ASRApp, ASRBoard, ASRBuilder
+ from builders.bouffalolab import BouffalolabApp, BouffalolabBoard, BouffalolabBuilder, BouffalolabThreadType
+@@ -477,6 +478,23 @@ def BuildAmebaTarget():
+     return target
+ 
+ 
++def BuildHisiliconTarget():
++    target = BuildTarget('hisilicon', HisiBuilder)
++
++    # board
++    target.AppendFixedTargets([
++        TargetPart('ws63', board=HisiBoard.WS63),
++    ])
++
++    # apps
++    target.AppendFixedTargets([
++        # TODO
++        TargetPart('light', app=HisiApp.LIGHT),
++    ])
++
++    return target
++
++
+ def BuildASRTarget():
+     target = BuildTarget('asr', ASRBuilder)
+ 
+@@ -859,6 +877,7 @@ def BuildOpenIotSdkTargets():
+ 
+ BUILD_TARGETS = [
+     BuildAmebaTarget(),
++    BuildHisiliconTarget(),
+     BuildASRTarget(),
+     BuildAndroidTarget(),
+     BuildBouffalolabTarget(),
+diff --git a/scripts/build/builders/hisilicon.py b/scripts/build/builders/hisilicon.py
+new file mode 100755
+index 0000000000..fba1f044a3
+--- /dev/null
++++ b/scripts/build/builders/hisilicon.py
+@@ -0,0 +1,70 @@
++# Copyright (c) 2021 Project CHIP Authors
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++import os
++from enum import Enum, auto
++
++from .builder import Builder, BuilderOutput
++
++
++class HisiBoard(Enum):
++    WS63 = auto()
++
++
++class HisiApp(Enum):
++    ALL_CLUSTERS = auto()
++    ALL_CLUSTERS_MINIMAL = auto()
++    LIGHT = auto()
++
++    @property
++    def ExampleName(self):
++        if self == HisiApp.ALL_CLUSTERS:
++            return 'all-clusters-app'
++        elif self == HisiApp.ALL_CLUSTERS_MINIMAL:
++            return 'all-clusters-minimal-app'
++        elif self == HisiApp.LIGHT:
++            return 'lighting-app'
++        else:
++            raise Exception('Unknown app type: %r' % self)
++
++    @property
++    def AppNamePrefix(self):
++        if self == HisiApp.ALL_CLUSTERS:
++            return 'chip-ameba-all-clusters-app'
++        elif self == HisiApp.ALL_CLUSTERS_MINIMAL:
++            return 'chip-ameba-all-clusters-minimal-app'
++        elif self == HisiApp.LIGHT:
++            return 'chip-ameba-lighting-app'
++        else:
++            raise Exception('Unknown app type: %r' % self)
++
++
++class HisiBuilder(Builder):
++
++    def __init__(self,
++                 root,
++                 runner,
++                 board: HisiBoard = HisiBoard.WS63,
++                 app: HisiApp = HisiApp.ALL_CLUSTERS):
++        super(HisiBuilder, self).__init__(root, runner)
++        self.board = board
++        self.app = app
++
++    def _build(self):
++        cmd = ['ninja', '-C', self.output_dir]
++
++        if self.ninja_jobs is not None:
++            cmd.append('-j' + str(self.ninja_jobs))
++
++        self._Execute(cmd, title='Building ' + self.identifier)
+diff --git a/scripts/checkout_submodules.py b/scripts/checkout_submodules.py
+index ff591f5a4e..df7881a5a9 100755
+--- a/scripts/checkout_submodules.py
++++ b/scripts/checkout_submodules.py
+@@ -35,6 +35,7 @@ ALL_PLATFORMS = set([
+     'darwin',
+     'silabs',
+     'esp32',
++    'hisilicon',
+     'infineon',
+     'nxp',
+     'rw61x',
+diff --git a/src/BUILD.gn b/src/BUILD.gn
+index 1fdc9383d9..f93dcc5fc9 100644
+--- a/src/BUILD.gn
++++ b/src/BUILD.gn
+@@ -24,7 +24,7 @@ import("${chip_root}/src/tracing/tracing_args.gni")
+ 
+ # chip_root relative to root_build_dir for macro-prefix-map.
+ # "/." avoids trailing "/" in result when chip_root is "//"
+-build_relative_chip_root = rebase_path("${chip_root}/.", root_build_dir)
++#build_relative_chip_root = rebase_path("${chip_root}/.", root_build_dir)
+ 
+ config("includes") {
+   include_dirs = [
+@@ -41,7 +41,7 @@ config("includes") {
+   defines = [ "CHIP_HAVE_CONFIG_H=1" ]
+ 
+   # Make __FILE__ and related macros relative to chip_root
+-  cflags = [ "-fmacro-prefix-map=${build_relative_chip_root}/=" ]
++  #cflags = [ "-fmacro-prefix-map=${build_relative_chip_root}/=" ]
+ }
+ 
+ if (chip_build_tests) {
+diff --git a/src/app/FailSafeContext.cpp b/src/app/FailSafeContext.cpp
+index 3c78767cc8..7108846479 100644
+--- a/src/app/FailSafeContext.cpp
++++ b/src/app/FailSafeContext.cpp
+@@ -85,14 +85,16 @@ void FailSafeContext::ScheduleFailSafeCleanup(FabricIndex fabricIndex, bool addN
+ 
+     SetFailSafeArmed(false);
+ 
+-    ChipDeviceEvent event{ .Type                 = DeviceEventType::kFailSafeTimerExpired,
+-                           .FailSafeTimerExpired = {
+-                               .fabricIndex                               = fabricIndex,
+-                               .addNocCommandHasBeenInvoked               = addNocCommandInvoked,
+-                               .updateNocCommandHasBeenInvoked            = updateNocCommandInvoked,
+-                               .updateTermsAndConditionsHasBeenInvoked    = mUpdateTermsAndConditionsHasBeenInvoked,
+-                               .setVidVerificationStatementHasBeenInvoked = mSetVidVerificationStatementHasBeenInvoked,
+-                           } };
++    // modified by hisilicon start
++    ChipDeviceEvent event;
++    event.Type = DeviceEventType::kFailSafeTimerExpired;
++    event.FailSafeTimerExpired.fabricIndex = fabricIndex;
++    event.FailSafeTimerExpired.addNocCommandHasBeenInvoked = addNocCommandInvoked;
++    event.FailSafeTimerExpired.updateNocCommandHasBeenInvoked = updateNocCommandInvoked;
++    event.FailSafeTimerExpired.updateTermsAndConditionsHasBeenInvoked = mUpdateTermsAndConditionsHasBeenInvoked;
++    event.FailSafeTimerExpired.setVidVerificationStatementHasBeenInvoked = mSetVidVerificationStatementHasBeenInvoked;
++    // modified by hisilicon end
++
+     CHIP_ERROR status = PlatformMgr().PostEvent(&event);
+ 
+     if (status != CHIP_NO_ERROR)
+diff --git a/src/app/chip_data_model.gni b/src/app/chip_data_model.gni
+index 7a4f44e1fa..22502df235 100644
+--- a/src/app/chip_data_model.gni
++++ b/src/app/chip_data_model.gni
+@@ -207,7 +207,7 @@ template("chip_data_model") {
+ 
+     if (!chip_build_controller_dynamic_server) {
+       sources += [
+-        "${_app_root}/reporting/reporting.cpp",
++#        "${_app_root}/reporting/reporting.cpp",
+         "${_app_root}/util/DataModelHandler.cpp",
+         "${_app_root}/util/attribute-storage.cpp",
+         "${_app_root}/util/attribute-table.cpp",
+diff --git a/src/app/clusters/access-control-server/access-control-server.cpp b/src/app/clusters/access-control-server/access-control-server.cpp
+index 2da030316c..ae80ea13b8 100644
+--- a/src/app/clusters/access-control-server/access-control-server.cpp
++++ b/src/app/clusters/access-control-server/access-control-server.cpp
+@@ -470,7 +470,11 @@ void AccessControlAttribute::OnEntryChanged(const SubjectDescriptor * subjectDes
+     }
+ 
+     CHIP_ERROR err;
+-    AclEvent event{ .changeType = ChangeTypeEnum::kChanged, .fabricIndex = subjectDescriptor->fabricIndex };
++    // modified by hisilicon start
++    AclEvent event;
++    event.changeType = ChangeTypeEnum::kChanged;
++    event.fabricIndex = subjectDescriptor->fabricIndex;
++    // modified by hisilicon end
+ 
+     if (changeType == AccessControl::EntryListener::ChangeType::kAdded)
+     {
+diff --git a/src/app/util/types_stub.h b/src/app/util/types_stub.h
+index fecfa04496..3a88380863 100644
+--- a/src/app/util/types_stub.h
++++ b/src/app/util/types_stub.h
+@@ -77,28 +77,30 @@ struct EmberBindingTableEntry
+     static EmberBindingTableEntry ForNode(chip::FabricIndex fabric, chip::NodeId node, chip::EndpointId localEndpoint,
+                                           chip::EndpointId remoteEndpoint, std::optional<chip::ClusterId> cluster)
+     {
+-        EmberBindingTableEntry entry = {
+-            .type        = MATTER_UNICAST_BINDING,
+-            .fabricIndex = fabric,
+-            .local       = localEndpoint,
+-            .clusterId   = cluster,
+-            .remote      = remoteEndpoint,
+-            .nodeId      = node,
+-        };
++        // modified by hisilicon start
++        EmberBindingTableEntry entry;
++        entry.type = MATTER_UNICAST_BINDING;
++        entry.fabricIndex = fabric;
++        entry.local = localEndpoint;
++        entry.clusterId = cluster;
++        entry.remote = remoteEndpoint;
++        entry.nodeId = node;
++        // modified by hisilicon end
+         return entry;
+     }
+ 
+     static EmberBindingTableEntry ForGroup(chip::FabricIndex fabric, chip::GroupId group, chip::EndpointId localEndpoint,
+                                            std::optional<chip::ClusterId> cluster)
+     {
+-        EmberBindingTableEntry entry = {
+-            .type        = MATTER_MULTICAST_BINDING,
+-            .fabricIndex = fabric,
+-            .local       = localEndpoint,
+-            .clusterId   = cluster,
+-            .remote      = 0,
+-            .groupId     = group,
+-        };
++        // modified by hisilicon start
++        EmberBindingTableEntry entry;
++        entry.type = MATTER_MULTICAST_BINDING;
++        entry.fabricIndex = fabric;
++        entry.local = localEndpoint;
++        entry.clusterId = cluster;
++        entry.remote = 0;
++        entry.groupId = group;
++        // modified by hisilicon end
+         return entry;
+     }
+ 
+diff --git a/src/include/platform/internal/GenericPlatformManagerImpl_CMSISOS.h b/src/include/platform/internal/GenericPlatformManagerImpl_CMSISOS.h
+index e40281527a..eab25ab42d 100644
+--- a/src/include/platform/internal/GenericPlatformManagerImpl_CMSISOS.h
++++ b/src/include/platform/internal/GenericPlatformManagerImpl_CMSISOS.h
+@@ -97,11 +97,9 @@ private:
+ #if defined(CHIP_CONFIG_CMSISOS_USE_STATIC_QUEUE) && CHIP_CONFIG_CMSISOS_USE_STATIC_QUEUE
+     uint8_t mEventQueueBuffer[CHIP_DEVICE_CONFIG_MAX_EVENT_QUEUE_SIZE * sizeof(ChipDeviceEvent)];
+     osMessageQueue_t mEventQueueStruct;
+-    const osMessageQueueAttr_t mEventQueueAttr = { .cb_mem  = &mEventQueueStruct,
+-                                                   .cb_size = osMessageQueueCbSize,
+-                                                   .mq_mem  = mEventQueueBuffer,
+-                                                   .mq_size = sizeof(mEventQueueBuffer) };
+-
++    // modified by hisilicon start
++    const osMessageQueueAttr_t mEventQueueAttr;
++    // modified by hisilicon end
+     const osMessageQueueAttr_t * mEventQueueAttrPtr = &mEventQueueAttr;
+ #else
+     // Nothing to configure for queues, Just use this to avoid #ifdef in the class implementation
+@@ -112,31 +110,15 @@ private:
+     uint8_t mEventLoopStack[CHIP_DEVICE_CONFIG_CHIP_TASK_STACK_SIZE];
+     osThread_t mEventLoopTaskControlBlock;
+ #endif // CHIP_CONFIG_CMSISOS_USE_STATIC_TASK
+-
+-    const osThreadAttr_t mEventLoopTaskAttr = {
+-        .name      = CHIP_DEVICE_CONFIG_CHIP_TASK_NAME,
+-        .attr_bits = osThreadDetached,
+-#if defined(CHIP_CONFIG_CMSISOS_USE_STATIC_TASK) && CHIP_CONFIG_CMSISOS_USE_STATIC_TASK
+-        .cb_mem    = &mEventLoopTaskControlBlock,
+-        .cb_size   = osThreadCbSize,
+-        .stack_mem = mEventLoopStack,
+-#endif // CHIP_CONFIG_CMSISOS_USE_STATIC_TASK
+-        .stack_size = CHIP_DEVICE_CONFIG_CHIP_TASK_STACK_SIZE,
+-        .priority   = CHIP_DEVICE_CONFIG_CHIP_TASK_PRIORITY
+-    };
+-
++    // modified by hisilicon start
++    osThreadAttr_t mEventLoopTaskAttr;
++    // modified by hisilicon end
+ #if defined(CHIP_CONFIG_CMSISOS_USE_STATIC_MUTEX) && CHIP_CONFIG_CMSISOS_USE_STATIC_MUTEX
+     osMutexCbSize uint8_t mMutexControlBlock[osMutexCbSize];
+ #endif // CHIP_CONFIG_CMSISOS_USE_STATIC_MUTEX
+-    const osMutexAttr_t mChipStackMutexAttr = {
+-        .name = "",
+-#if defined(CHIP_CONFIG_CMSISOS_USE_STATIC_MUTEX) && CHIP_CONFIG_CMSISOS_USE_STATIC_MUTEX
+-        .cb_mem  = &mMutexControlBlock,
+-        .cb_size = osMutexCbSize,
+-#endif // CHIP_CONFIG_CMSISOS_USE_STATIC_MUTEX
+-        .attr_bits = osMutexRecursive | osMutexPrioInherit,
+-    };
+-
++    // modified by hisilicon start
++    osMutexAttr_t mChipStackMutexAttr;
++    // modified by hisilicon end
+ #if defined(CHIP_DEVICE_CONFIG_ENABLE_BG_EVENT_PROCESSING) && CHIP_DEVICE_CONFIG_ENABLE_BG_EVENT_PROCESSING
+     static void BackgroundEventLoopTaskMain(void * pvParameter);
+     std::atomic<bool> mShouldRunBackgroundEventLoop;
+@@ -144,11 +126,9 @@ private:
+ #if defined(CHIP_CONFIG_CMSISOS_USE_STATIC_QUEUE) && CHIP_CONFIG_CMSISOS_USE_STATIC_QUEUE
+     uint8_t mBackgroundQueueBuffer[CHIP_DEVICE_CONFIG_BG_MAX_EVENT_QUEUE_SIZE * sizeof(ChipDeviceEvent)];
+     osMessageQueue_t mBackgroundQueueStruct;
+-    const osMessageQueueAttr_t mBgQueueAttr = { .cb_mem  = &mBackgroundQueueStruct,
+-                                                .cb_size = osMessageQueueCbSize,
+-                                                .mq_mem  = mBackgroundQueueBuffer,
+-                                                .mq_size = sizeof(mBackgroundQueueBuffer) };
+-
++    // modified by hisilicon start
++    const osMessageQueueAttr_t mBgQueueAttr;
++    // modified by hisilicon end
+     const osMessageQueueAttr_t * mBgQueueAttrPtr = &mBgQueueAttr;
+ #else
+     // Nothing to configure for queues, Just use this to avoid #ifdef in the class implementation
+@@ -172,6 +152,44 @@ private:
+         .priority   = CHIP_DEVICE_CONFIG_BG_TASK_PRIORITY
+     };
+ #endif // CHIP_DEVICE_CONFIG_ENABLE_BG_EVENT_PROCESSING
++
++// modified by hisilicon start
++public:
++    GenericPlatformManagerImpl_CMSISOS()
++{
++#if defined(CHIP_CONFIG_CMSISOS_USE_STATIC_QUEUE) && CHIP_CONFIG_CMSISOS_USE_STATIC_QUEUE
++    mEventQueueAttr.cb_mem  = &mEventQueueStruct;
++    mEventQueueAttr.cb_size = osMessageQueueCbSize;
++    mEventQueueAttr.mq_mem  = mEventQueueBuffer;
++    mEventQueueAttr.mq_size = sizeof(mEventQueueBuffer);
++#endif
++
++    mEventLoopTaskAttr.name      = CHIP_DEVICE_CONFIG_CHIP_TASK_NAME;
++    mEventLoopTaskAttr.attr_bits = osThreadDetached;
++#if defined(CHIP_CONFIG_CMSISOS_USE_STATIC_TASK) && CHIP_CONFIG_CMSISOS_USE_STATIC_TASK
++    mEventLoopTaskAttr.cb_mem    = &mEventLoopTaskControlBlock;
++    mEventLoopTaskAttr.cb_size   = osThreadCbSize;
++    mEventLoopTaskAttr.stack_mem = mEventLoopStack;
++#endif // CHIP_CONFIG_CMSISOS_USE_STATIC_TASK
++    mEventLoopTaskAttr.stack_size = CHIP_DEVICE_CONFIG_CHIP_TASK_STACK_SIZE;
++    mEventLoopTaskAttr.priority   = (osPriority_t)CHIP_DEVICE_CONFIG_CHIP_TASK_PRIORITY;
++
++    mChipStackMutexAttr.name = "";
++#if defined(CHIP_CONFIG_CMSISOS_USE_STATIC_MUTEX) && CHIP_CONFIG_CMSISOS_USE_STATIC_MUTEX
++    mChipStackMutexAttr.cb_mem  = &mMutexControlBlock;
++    mChipStackMutexAttr.cb_size = osMutexCbSize;
++#endif // CHIP_CONFIG_CMSISOS_USE_STATIC_MUTEX
++    mChipStackMutexAttr.attr_bits = osMutexRecursive | osMutexPrioInherit;
++
++#if defined(CHIP_CONFIG_CMSISOS_USE_STATIC_QUEUE) && CHIP_CONFIG_CMSISOS_USE_STATIC_QUEUE
++    mBgQueueAttr.cb_mem  = &mBackgroundQueueStruct;
++    mBgQueueAttr.cb_size = osMessageQueueCbSize;
++    mBgQueueAttr.mq_mem  = mBackgroundQueueBuffer;
++    mBgQueueAttr.mq_size = sizeof(mBackgroundQueueBuffer);
++#endif
++}
++// modified by hisilicon end
++
+ };
+ 
+ // Instruct the compiler to instantiate the template only when explicitly told to do so.
+diff --git a/src/include/platform/internal/GenericPlatformManagerImpl_CMSISOS.ipp b/src/include/platform/internal/GenericPlatformManagerImpl_CMSISOS.ipp
+index b75fcbe0c2..a475ee9d12 100644
+--- a/src/include/platform/internal/GenericPlatformManagerImpl_CMSISOS.ipp
++++ b/src/include/platform/internal/GenericPlatformManagerImpl_CMSISOS.ipp
+@@ -67,7 +67,7 @@ CHIP_ERROR GenericPlatformManagerImpl_CMSISOS<ImplClass>::_InitChipStack(void)
+     {
+         // Clear out any events that might be stuck in the queue, so we start
+         // with a clean slate, as if we had just re-created the queue.
+-        osMessageQueueReset(mChipEventQueue);
++        // osMessageQueueReset(mChipEventQueue);
+     }
+ 
+     mShouldRunEventLoop.store(false);
+@@ -206,6 +206,19 @@ void GenericPlatformManagerImpl_CMSISOS<ImplClass>::_RunEventLoop(void)
+ template <class ImplClass>
+ CHIP_ERROR GenericPlatformManagerImpl_CMSISOS<ImplClass>::_StartEventLoopTask(void)
+ {
++    // modified by hisilicon start
++    mEventLoopTaskAttr.name      = CHIP_DEVICE_CONFIG_CHIP_TASK_NAME;
++    mEventLoopTaskAttr.attr_bits = osThreadDetached;
++#if defined(CHIP_CONFIG_CMSISOS_USE_STATIC_TASK) && CHIP_CONFIG_CMSISOS_USE_STATIC_TASK
++    mEventLoopTaskAttr.cb_mem    = &mEventLoopTaskControlBlock;
++    mEventLoopTaskAttr.cb_size   = osThreadCbSize;
++    mEventLoopTaskAttr.stack_mem = mEventLoopStack;
++#endif // CHIP_CONFIG_CMSISOS_USE_STATIC_TASK
++    mEventLoopTaskAttr.stack_size = CHIP_DEVICE_CONFIG_CHIP_TASK_STACK_SIZE;
++    mEventLoopTaskAttr.priority   = (osPriority_t)CHIP_DEVICE_CONFIG_CHIP_TASK_PRIORITY;
++
++    ChipLogDetail(DeviceLayer, "CHIP start osThreadNew, prio:%d", mEventLoopTaskAttr.priority);
++    // modified by hisilicon end
+     mEventLoopTask = osThreadNew(EventLoopTaskMain, this, &mEventLoopTaskAttr);
+     return (mEventLoopTask != nullptr) ? CHIP_NO_ERROR : CHIP_ERROR_NO_MEMORY;
+ }
+diff --git a/src/lib/core/GroupedCallbackList.h b/src/lib/core/GroupedCallbackList.h
+index 1b511c56ee..18e3534463 100644
+--- a/src/lib/core/GroupedCallbackList.h
++++ b/src/lib/core/GroupedCallbackList.h
+@@ -142,40 +142,62 @@ private:
+      *  distinct trampolines that tag the "cancel" function pointer stored in each
+      *  node with the index of the callback type within the argument type tuple.
+      */
++    /* modified by hisilicon start */
++    // 终止递归
++    template <std::size_t... Index>
++    void EnqueueHelperImpl(Cancelable*& group, std::index_sequence<Index...>)
++    {
++    }
++
++    template <typename First, typename... Rest, std::size_t I, std::size_t... Index>
++    void EnqueueHelperImpl(Cancelable*& group, std::index_sequence<I, Index...>, First* first, Rest*... rest)
++    {
++        if (first != nullptr) {
++            detail::EnqueueWithGroup(first->Cancel(), group, this, &detail::TaggedDequeueGroup<I>);
++        }
++        EnqueueHelperImpl(group, std::index_sequence<Index...>{}, rest...);
++    }
++
++    template <typename... Callbacks, std::size_t... Index>
++    void EnqueueHelper(Cancelable*& group, std::index_sequence<Index...>, Callbacks*... callbacks)
++    {
++        EnqueueHelperImpl(group, std::index_sequence<Index...>{}, callbacks...);
++    }
+ 
+     template <std::size_t... Index>
+-    void Enqueue(std::index_sequence<Index...>, Callback<T> *... callback)
++    void Enqueue(std::index_sequence<Index...>, Callback<T>*... callbacks)
+     {
+-        Cancelable * group = nullptr;
+-        (
+-            [&] {
+-                VerifyOrReturn(callback != nullptr);
+-                detail::EnqueueWithGroup(callback->Cancel(), group, this, &detail::TaggedDequeueGroup<Index>);
+-            }(),
+-            ...);
++        Cancelable* group = nullptr;
++        EnqueueHelper(group, std::index_sequence<Index...>{}, callbacks...);
+     }
++    /* modified by hisilicon end */
+ 
++    /* modified by hisilicon start */
+     template <std::size_t... Index>
+-    bool Peek(std::index_sequence<Index...>, Callback<T> *&... callback) const
++    bool Peek(std::index_sequence<Index...>, Callback<T> *&... callbacks) const
+     {
+         Cancelable * cancelable = mNext;
+         VerifyOrReturnValue(cancelable != this, false);
+         Cancelable * groupPrev = cancelable->mPrev;
+-        (
+-            [&] {
+-                if (cancelable->mPrev == groupPrev && cancelable->mCancel == &detail::TaggedDequeueGroup<Index>)
+-                {
+-                    callback   = Callback<decltype(callback->mCall)>::FromCancelable(cancelable);
+-                    cancelable = cancelable->mNext;
+-                }
+-                else
+-                {
+-                    callback = nullptr;
+-                }
+-            }(),
+-            ...);
++
++        // 辅助函数用于处理每个回调
++        auto processCallback = [&](auto *&callback, void* func /* std::size_t index */) {
++            if (cancelable->mPrev == groupPrev && cancelable->mCancel == func) {
++                callback = Callback<decltype(callback->mCall)>::FromCancelable(cancelable);
++                cancelable = cancelable->mNext;
++            } else {
++                callback = nullptr;
++            }
++        };
++
++        // 使用初始化列表展开参数包
++        (void)std::initializer_list<int>{
++            (processCallback(callbacks, (void*)&detail::TaggedDequeueGroup<Index>), 0)...
++        };
++
+         return true;
+     }
++    /* modified by hisilicon end */
+ };
+ 
+ namespace detail {
+diff --git a/src/platform/BUILD.gn b/src/platform/BUILD.gn
+index ef31d337f9..04cffde675 100644
+--- a/src/platform/BUILD.gn
++++ b/src/platform/BUILD.gn
+@@ -301,6 +301,12 @@ if (chip_device_platform != "none" && chip_device_platform != "external") {
+         "CHIP_DEVICE_LAYER_TARGET=Ameba",
+         "CHIP_DEVICE_CONFIG_ENABLE_WIFI=${chip_enable_wifi}",
+       ]
++    } else if (chip_device_platform == "hisilicon") {
++      device_layer_target_define = "HISI"
++      defines += [
++        "CHIP_DEVICE_LAYER_TARGET=hisilicon",
++        "CHIP_DEVICE_CONFIG_ENABLE_WIFI=${chip_enable_wifi}",
++      ]
+     } else if (chip_device_platform == "realtek_bee") {
+       device_layer_target_define = "REALTEK_BEE"
+       defines += [ "CHIP_DEVICE_LAYER_TARGET=realtek/BEE" ]
+@@ -377,6 +383,7 @@ if (chip_device_platform != "none" && chip_device_platform != "external") {
+       "FAKE",
+       "ANDROID",
+       "AMEBA",
++      "HISI",
+       "REALTEK_BEE",
+       "CYW30739",
+       "WEBOS",
+@@ -625,6 +632,8 @@ if (chip_device_platform != "none") {
+       _platform_target = "Infineon/PSOC6"
+     } else if (chip_device_platform == "ameba") {
+       _platform_target = "Ameba"
++    } else if (chip_device_platform == "hisilicon") {
++      _platform_target = "hisilicon"
+     } else if (chip_device_platform == "realtek_bee") {
+       _platform_target = "realtek/BEE"
+     } else if (chip_device_platform == "webos") {
+diff --git a/src/platform/DeviceControlServer.cpp b/src/platform/DeviceControlServer.cpp
+index 584ddbc08f..12d5a22496 100644
+--- a/src/platform/DeviceControlServer.cpp
++++ b/src/platform/DeviceControlServer.cpp
+@@ -36,11 +36,13 @@ DeviceControlServer & DeviceControlServer::DeviceControlSvr()
+ 
+ CHIP_ERROR DeviceControlServer::PostCommissioningCompleteEvent(NodeId peerNodeId, FabricIndex accessingFabricIndex)
+ {
+-    ChipDeviceEvent event{
++    /* modified by hisilicon start */
++    ChipDeviceEvent event;
++    event.Type                  = DeviceEventType::kCommissioningComplete;
++    event.CommissioningComplete.nodeId = peerNodeId;
++    event.CommissioningComplete.fabricIndex = accessingFabricIndex;
++    /* modified by hisilicon end */
+ 
+-        .Type                  = DeviceEventType::kCommissioningComplete,
+-        .CommissioningComplete = { .nodeId = peerNodeId, .fabricIndex = accessingFabricIndex }
+-    };
+ 
+     return PlatformMgr().PostEvent(&event);
+ }
+@@ -66,9 +68,12 @@ exit:
+ 
+ CHIP_ERROR DeviceControlServer::PostConnectedToOperationalNetworkEvent(ByteSpan networkID)
+ {
+-    ChipDeviceEvent event{ .Type = DeviceEventType::kOperationalNetworkEnabled,
++    /* modified by hisilicon start */
++    ChipDeviceEvent event;
++    event.Type = DeviceEventType::kOperationalNetworkEnabled;
+                            // TODO(cecille): This should be some way to specify thread or wifi.
+-                           .OperationalNetwork = { .network = 0 } };
++    event.OperationalNetwork.network = 0;
++    /* modified by hisilicon end */
+     return PlatformMgr().PostEvent(&event);
+ }
+ 
+diff --git a/src/platform/PlatformEventSupport.cpp b/src/platform/PlatformEventSupport.cpp
+index 947a7f2fe6..2ba70d04c2 100644
+--- a/src/platform/PlatformEventSupport.cpp
++++ b/src/platform/PlatformEventSupport.cpp
+@@ -34,7 +34,11 @@ using namespace ::chip::DeviceLayer;
+ 
+ CHIP_ERROR PlatformEventing::ScheduleLambdaBridge(System::Layer & aLayer, LambdaBridge && bridge)
+ {
+-    ChipDeviceEvent event{ .Type = DeviceEventType::kChipLambdaEvent, .LambdaEvent = std::move(bridge) };
++    /* modified by hisilicon start */
++    ChipDeviceEvent event;
++    event.Type = DeviceEventType::kChipLambdaEvent;
++    event.LambdaEvent = std::move(bridge);
++    /* modified by hisilicon end */
+ 
+     return PlatformMgr().PostEvent(&event);
+ }
+diff --git a/src/platform/device.gni b/src/platform/device.gni
+index 4f625725ca..f7055dbd1e 100644
+--- a/src/platform/device.gni
++++ b/src/platform/device.gni
+@@ -72,6 +72,7 @@ declare_args() {
+       chip_device_platform == "webos" || chip_device_platform == "cc32xx" ||
+       chip_device_platform == "bl602" || chip_device_platform == "beken" ||
+       chip_device_platform == "mt793x" || chip_device_platform == "asr" ||
++      chip_device_platform == "hisilicon" ||
+       (chip_device_platform == "darwin" && current_os == "mac")
+ 
+   # Enable ethernet support
+@@ -99,6 +100,7 @@ declare_args() {
+       chip_device_platform == "ameba" || chip_device_platform == "webos" ||
+       chip_device_platform == "cc32xx" || chip_device_platform == "beken" ||
+       chip_device_platform == "mt793x" || chip_device_platform == "asr" ||
++      chip_device_platform == "hisilicon" ||
+       chip_device_platform == "openiotsdk" || chip_device_platform == "nuttx") {
+     chip_mdns = "minimal"
+   } else if (chip_device_platform == "darwin" ||
+@@ -206,6 +208,8 @@ if (chip_device_platform == "cc13x4_26x4") {
+   _chip_device_layer = "Zephyr"
+ } else if (chip_device_platform == "beken") {
+   _chip_device_layer = "Beken"
++} else if (chip_device_platform == "hisilicon") {
++  _chip_device_layer = "hisilicon"
+ } else if (chip_device_platform == "mt793x") {
+   _chip_device_layer = "mt793x"
+ } else if (chip_device_platform == "openiotsdk") {
+@@ -280,7 +284,7 @@ assert(
+         chip_device_platform == "beken" || chip_device_platform == "bl602" ||
+         chip_device_platform == "bl616" || chip_device_platform == "bl702" ||
+         chip_device_platform == "bl702l" || chip_device_platform == "mt793x" ||
+-        chip_device_platform == "SiWx917" ||
++        chip_device_platform == "SiWx917" || chip_device_platform == "hisilicon" ||
+         chip_device_platform == "openiotsdk" || chip_device_platform == "asr" ||
+         chip_device_platform == "stm32" || chip_device_platform == "nuttx",
+     "Please select a valid value for chip_device_platform")
+diff --git a/src/platform/logging/BUILD.gn b/src/platform/logging/BUILD.gn
+index 7e309a652e..86d6215193 100644
+--- a/src/platform/logging/BUILD.gn
++++ b/src/platform/logging/BUILD.gn
+@@ -35,6 +35,8 @@ group("default") {
+       deps += [ "${chip_root}/src/platform/ti/cc13xx_26xx/cc13x4_26x4:logging" ]
+     } else if (chip_device_platform == "ameba") {
+       deps += [ "${chip_root}/src/platform/Ameba:logging" ]
++    } else if (chip_device_platform == "hisilicon") {
++      deps += [ "${chip_root}/src/platform/hisilicon:logging" ]
+     } else if (chip_device_platform == "realtek_bee") {
+       deps += [ "${chip_root}/src/platform/realtek/BEE:logging" ]
+     } else if (chip_device_platform == "asr") {
+diff --git a/src/system/SystemPacketBuffer.h b/src/system/SystemPacketBuffer.h
+index 8fd73b9c35..d42ddee70d 100644
+--- a/src/system/SystemPacketBuffer.h
++++ b/src/system/SystemPacketBuffer.h
+@@ -122,7 +122,9 @@ public:
+      * The maximum size of a regular buffer an application can allocate with no protocol header reserve.
+      */
+ #if CHIP_SYSTEM_CONFIG_USE_LWIP
+-    static constexpr size_t kMaxSizeWithoutReserve = LWIP_MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE);
++    /* modified by hisilicon start */
++    static constexpr size_t kMaxSizeWithoutReserve = LWIP_MEM_ALIGN_SIZE(PBUF_POOL_BUFSIZE) - LWIP_MEM_ALIGN_SIZE(PBUF_ZERO_COPY_RESERVE);
++    /* modified by hisilicon end */
+ #else
+     static constexpr size_t kMaxSizeWithoutReserve = CHIP_SYSTEM_CONFIG_PACKETBUFFER_CAPACITY_MAX;
+ #endif
+@@ -131,8 +133,9 @@ public:
+      * The number of bytes to reserve in a network packet buffer to contain all the possible protocol encapsulation headers
+      * before the application data.
+      */
+-    static constexpr uint16_t kDefaultHeaderReserve = CHIP_SYSTEM_CONFIG_HEADER_RESERVE_SIZE;
+-
++    /* modified by hisilicon start */
++    static constexpr uint16_t kDefaultHeaderReserve = CHIP_SYSTEM_CONFIG_HEADER_RESERVE_SIZE + LWIP_MEM_ALIGN_SIZE(PBUF_ZERO_COPY_RESERVE);
++    /* modified by hisilicon end */
+     /**
+      * The maximum size of a regular buffer an application can allocate with the default protocol header reserve.
+      */

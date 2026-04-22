@@ -1,0 +1,41 @@
+/**
+@mainpage Introduction
+
+@section  cfbb_home Home
+
+@em cfbb is a standalone set of drivers and libs for peripherals present in connectivity Semiconductor's SoCs.
+
+@section cfbb_toc Toc
+
+@code
+.
+|-- CMakeLists.txt
+|-- application
+|-- bootloader
+|-- build
+|-- drivers
+|-- include
+|-- kernel
+|-- middleware
+|-- open_source
+|-- output
+|-- protocol
+|-- test
+|-- tools
+|-- vendor
+@endcode
+
+@section cfbb_compile Compile
+
+1. Build the targets.
+@code
+$python3 build.py target_name -j24
+@endcode
+
+2. Build to generate documents.
+@code
+$cd build
+$./build_doxygen.sh
+@endcode
+
+*/

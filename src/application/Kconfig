@@ -1,0 +1,24 @@
+#===============================================================================
+# @brief    Kconfig file.
+# Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2023. All rights reserved.
+#===============================================================================
+
+config SAMPLE_ENABLE
+    bool
+    prompt "Enable Sample."
+    default n
+    help
+        This option means support Samples.
+
+if SAMPLE_ENABLE
+osource "application/samples/Kconfig"
+endif
+
+config WS63_ENABLE
+    bool
+    prompt "Enable WS63."
+    default n
+
+if WS63_ENABLE
+osource "application/ws63/Kconfig"
+endif

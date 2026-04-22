@@ -1,0 +1,51 @@
+STRING( REGEX REPLACE ".*/(.*)" "\\1" CURRENT_FOLDER ${CMAKE_CURRENT_SOURCE_DIR} )
+set(MODULE_NAME ${CURRENT_FOLDER})
+
+set(LITEOS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../..)
+
+set(LITEOS_OPENSOURCE_FR_PATH ${LITEOS_PATH}/open_source/FreeRTOS/FreeRTOS-Kernel-11.1.0)
+
+# 寻找所有FreeRTOS的.c文件
+file(GLOB_RECURSE LITEOS_FR_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+
+# 设置需要排除的文件
+set(REMOVE_SOURCES "")
+list(REMOVE_ITEM LITEOS_FR_PATH ${REMOVE_SOURCES})
+
+# 添加头文件
+set(MODULE_INCLUDE_RTT
+    ${CMAKE_CURRENT_SOURCE_DIR}/
+    ${LITEOS_OPENSOURCE_FR_PATH}/include/
+    ${LITEOS_PATH}/compat/freertos/include/
+)
+
+include_directories(
+    ${MODULE_INCLUDE_RTT}
+)
+
+# add global include, compile macro and options to public target #
+set(MODULE_CXXINCLUDE_PUB)
+set(MODULE_COPTS_PUB)
+set(MODULE_ASOPTS_PUB)
+set(MODULE_CXXOPTS_PUB)
+set(MODULE_CMACRO_PUB)
+set(MODULE_ASMACRO_PUB)
+set(MODULE_CXXMACRO_PUB)
+
+
+# add local include, compile macro and options to private target #
+set(MODULE_COPTS_PRI ${LITEOS_NON_SECURE_LOCAL_OPTS})
+set(MODULE_ASOPTS_PRI ${LITEOS_NON_SECURE_LOCAL_OPTS})
+set(MODULE_CXXOPTS_PRI ${LITEOS_NON_SECURE_LOCAL_OPTS})
+set(MODULE_CMACRO_PRI)
+set(MODULE_ASMACRO_PRI)
+set(MODULE_CXXMACRO_PRI)
+
+
+# add srcs to private target #
+list(APPEND LOCAL_SRCS_${LOSCFG_COMPAT_FREERTOS} ${LITEOS_FR_PATH})
+
+list(APPEND LOCAL_SRCS_${LOSCFG_COMPAT_FREERTOS} ${LITEOS_OPENSOURCE_FR_PATH}/stream_buffer.c)
+
+set(LOCAL_SRCS ${LOCAL_SRCS_y})
+include(${MODULE})

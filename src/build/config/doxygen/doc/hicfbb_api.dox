@@ -1,0 +1,260 @@
+/**
+
+@defgroup software_development_guidebook Software Development Guidebook
+@{
+    @brief List of all software development guidebook available.
+
+    @defgroup software_development_guidebook_adc ADC
+    @defgroup software_development_guidebook_calendar Calendar
+    @defgroup software_development_guidebook_dma DMA
+    @defgroup software_development_guidebook_edge EDGE
+    @defgroup software_development_guidebook_eflash EFLASH
+    @defgroup software_development_guidebook_gpio GPIO
+    @defgroup software_development_guidebook_i2c I2C
+    @defgroup software_development_guidebook_i2s I2S
+    @defgroup software_development_guidebook_keyscan Keyscan
+    @defgroup software_development_guidebook_mem_monitor MEM_Monitor
+    @defgroup software_development_guidebook_pcm PCM
+    @defgroup software_development_guidebook_pdm PDM
+    @defgroup software_development_guidebook_pinctrl Pinctrl
+    @defgroup software_development_guidebook_pmp PMP
+    @defgroup software_development_guidebook_mpu MPU
+    @defgroup software_development_guidebook_pwm PWM
+    @defgroup software_development_guidebook_qdec QDEC
+    @defgroup software_development_guidebook_sdio SDIO
+    @defgroup software_development_guidebook_sfc SFC
+    @defgroup software_development_guidebook_spi SPI
+    @defgroup software_development_guidebook_ssi SSI
+    @defgroup software_development_guidebook_systick Systick
+    @defgroup software_development_guidebook_tcxo TCXO
+    @defgroup software_development_guidebook_timer Timer
+    @defgroup software_development_guidebooks_rtc RTC
+    @defgroup software_development_guidebook_tsensor Tsensor
+    @defgroup software_development_guidebook_uart UART
+    @defgroup software_development_guidebook_watchdog Watchdog
+    @defgroup software_development_guidebook_security_unified Security Unified
+    @defgroup software_development_guidebook_pm Power Manager
+    @defgroup software_development_guidebook_flash FLASH
+    @defgroup software_development_guidebook_can CAN
+@}
+
+@defgroup drivers Drivers
+@{
+    @brief List of all drivers available.
+
+    @defgroup device Device
+    @{
+        @brief List of all devices available.
+    @}
+
+    @defgroup drivers_driver Driver
+    @{
+        @brief List of all drivers available.
+
+        @defgroup drivers_driver_adc ADC
+        @defgroup drivers_driver_calendar Calendar
+        @defgroup drivers_driver_dma DMA
+        @defgroup drivers_driver_edge EDGE
+        @defgroup drivers_driver_eflash EFLASH
+        @defgroup drivers_driver_gpio GPIO
+        @defgroup drivers_driver_i2c I2C
+        @defgroup drivers_driver_i2s I2S
+        @defgroup drivers_driver_keyscan Keyscan
+        @defgroup drivers_driver_mem_monitor MEM_Monitor
+        @defgroup drivers_driver_pcm PCM
+        @defgroup drivers_driver_pdm PDM
+        @defgroup drivers_driver_pinctrl Pinctrl
+        @defgroup drivers_driver_pmp PMP
+        @defgroup drivers_driver_mpu MPU
+        @defgroup drivers_driver_pwm PWM
+        @defgroup drivers_driver_qdec QDEC
+        @defgroup drivers_driver_sdio SDIO
+        @defgroup drivers_driver_sfc SFC
+        @defgroup drivers_driver_spi SPI
+        @defgroup drivers_driver_ssi SSI
+        @defgroup drivers_driver_systick Systick
+        @defgroup drivers_driver_tcxo TCXO
+        @defgroup drivers_driver_timer Timer
+        @defgroup drivers_drivers_rtc RTC
+        @defgroup drivers_driver_tsensor Tsensor
+        @defgroup drivers_driver_uart UART
+        @defgroup drivers_driver_watchdog Watchdog
+        @defgroup drivers_driver_security_unified Security Unified
+        @defgroup drivers_driver_pm Power Manager
+        @defgroup drivers_driver_flash FLASH
+        @defgroup drivers_driver_can CAN
+    @}
+
+    @defgroup drivers_hal HAL
+    @{
+        @brief List of all hal drivers available.
+
+        @defgroup drivers_hal_adc ADC
+        @defgroup drivers_hal_calendar Calendar
+        @defgroup drivers_hal_dma DMA
+        @defgroup drivers_hal_edge EDGE
+        @defgroup drivers_hal_eflash EFLASH
+        @defgroup drivers_hal_gpio GPIO
+        @defgroup drivers_hal_i2c I2C
+        @defgroup drivers_hal_keyscan Keyscan
+        @defgroup drivers_hal_mem_monitor MEM_Monitor
+        @defgroup drivers_hal_pdm PDM
+        @defgroup drivers_hal_pinctrl Pinctrl
+        @defgroup drivers_hal_pmp PMP
+        @defgroup drivers_hal_mpu MPU
+        @defgroup drivers_hal_pwm PWM
+        @defgroup drivers_hal_qdec QDEC
+        @defgroup drivers_hal_sdio SDIO
+        @defgroup drivers_hal_sfc SFC
+        @defgroup drivers_hal_sio SIO
+        @defgroup drivers_hal_spi SPI
+        @defgroup drivers_hal_ssi SSI
+        @defgroup drivers_hal_systick Systick
+        @defgroup drivers_hal_tcxo TCXO
+        @defgroup drivers_hal_timer Timer
+        @defgroup drivers_hal_rtc RTC
+        @defgroup drivers_hal_tsensor Tsensor
+        @defgroup drivers_hal_uart UART
+        @defgroup drivers_hal_watchdog Watchdog
+        @defgroup drivers_hal_can CAN
+    @}
+
+    @defgroup drivers_port Port
+    @{
+        @brief List of all port drivers available.
+
+        @defgroup drivers_port_adc ADC
+        @defgroup drivers_port_calendar Calendar
+        @defgroup drivers_port_dma DMA
+        @defgroup drivers_port_edge EDGE
+        @defgroup drivers_port_eflash EFLASH
+        @defgroup drivers_port_gpio GPIO
+        @defgroup drivers_port_i2c I2C
+        @defgroup drivers_port_i2s I2S
+        @defgroup drivers_port_keyscan Keyscan
+        @defgroup drivers_port_mem_monitor MEM_Monitor
+        @defgroup drivers_port_pcm PCM
+        @defgroup drivers_port_pdm PDM
+        @defgroup drivers_port_pinctrl Pinctrl
+        @defgroup drivers_port_pmp PMP
+        @defgroup drivers_port_pwm PWM
+        @defgroup drivers_port_qdec QDEC
+        @defgroup drivers_port_sdio SDIO
+        @defgroup drivers_port_sfc SFC
+        @defgroup drivers_port_spi SPI
+        @defgroup drivers_port_ssi SSI
+        @defgroup drivers_port_systick Systick
+        @defgroup drivers_port_tcxo TCXO
+        @defgroup drivers_port_timer Timer
+        @defgroup drivers_port_rtc RTC
+        @defgroup drivers_port_tsensor Tsensor
+        @defgroup drivers_port_uart UART
+        @defgroup drivers_port_watchdog Watchdog
+        @defgroup drivers_port_flash FLASH
+        @defgroup drivers_port_can CAN
+    @}
+@}
+
+@defgroup middleware Middleware
+@{
+    @brief List of all middleware available.
+
+    @defgroup middleware_services Services
+    @{
+        @brief List of all services available.
+
+        @defgroup middleware_service_bt_sle BT&SLE Service
+        @{
+            @defgroup middleware_service_bt_sle_br BR Service
+            @defgroup middleware_service_bt_sle_ble BLE Service
+            @{
+                @brief List of all BLE Service available.
+
+                @defgroup bluetooth_bts_factory BTS FACTORY API
+                @defgroup bluetooth_bts_gatt_stru BTS GATT STRU API
+                @defgroup bluetooth_bts_gatt_client BTS GATT CLIENT API
+                @defgroup bluetooth_bts_gatt_server BTS GATT SERVER API
+                @defgroup bluetooth_bts_gap BTS LE GAP API
+            @}
+            @defgroup middleware_service_bt_sle_sle SLE Service
+            @{
+                @brief List of all SLE Service available.
+
+                @defgroup sle_common PUBLIC API
+                @defgroup sle_low_latency API
+                @defgroup sle_connection_manager connection manager API
+                @defgroup sle_device_announce Device Announce & Seek Manager API
+                @defgroup sle_error_code Error Code API
+                @defgroup sle_factory_manager factory manager API
+                @defgroup sle_hadm_manager hadm manager API
+                @defgroup sle ssap client Service Access Protocol CLient API
+                @defgroup sle_ssap_server Service Access Protocol SERVER API
+                @defgroup sle_ssap_stru Service Access Protocol data struct defination.
+                @defgroup sle_trans_manager trans manager API
+            @}
+            @defgroup middleware_service_bt_sle_common COMMON Service
+        @}
+        @defgroup middleware_service_wifi WIFI Service
+        @defgroup middleware_service_nfc NFC Service
+        @{
+            @defgroup middleware_service_nfc_controller NFC Service Controller
+            @defgroup middleware_service_nfc_tag NFC Service Tag
+        @}
+        @defgroup middleware_service_gnss GNSS Service
+        @defgroup middleware_service_radar RADAR Service
+        @defgroup middleware_service_slp SLP Service
+    @}
+
+    @defgroup middleware_utils Utils
+    @{
+        @brief List of all utils available.
+
+        @defgroup middleware_utils_partition_api Partition
+        @defgroup middleware_utils_at AT
+        @defgroup middleware_utils_dfx DFX
+        @defgroup middleware_utils_nv_api NV
+        @defgroup middleware_utils_update_api Update
+        @defgroup middleware_utils_algorithm Algorithm
+        @defgroup middleware_utils_version Version
+    @}
+
+    @defgroup middleware_chips Chips
+    @{
+        @brief List of all utils available.
+
+        @defgroup middleware_chips_partition Partition
+    @}
+@}
+
+@defgroup osal Osal
+@{
+    @brief List of all osal interface available.
+
+    @defgroup osal_addr osal_addr
+    @defgroup osal_atomic osal_atomic
+    @defgroup osal_barrier osal_barrier
+    @defgroup osal_bitmap osal_bitmap
+    @defgroup osal_cache osal_cache
+    @defgroup osal_completion osal_completion
+    @defgroup osal_debug osal_debug
+    @defgroup osal_delayedwork osal_delayedwork
+    @defgroup osal_device osal_device
+    @defgroup osal_drvbox osal_drvbox
+    @defgroup osal_event osal_event
+    @defgroup osal_fileops osal_fileops
+    @defgroup osal_interrupt osal_interrupt
+    @defgroup osal_math osal_math
+    @defgroup osal_msgqueue osal_msgqueue
+    @defgroup osal_mutex osal_mutex
+    @defgroup osal_proc osal_proc
+    @defgroup osal_rwlock osal_rwlock
+    @defgroup osal_semaphore osal_semaphore
+    @defgroup osal_spinlock osal_spinlock
+    @defgroup osal_string osal_string
+    @defgroup osal_task osal_task
+    @defgroup osal_timer osal_timer
+    @defgroup osal_wait osal_wait
+    @defgroup osal_workqueue osal_workqueue
+@}
+
+*/

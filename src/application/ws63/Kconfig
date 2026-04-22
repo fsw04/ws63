@@ -1,0 +1,14 @@
+#===============================================================================
+# @brief    Kconfig file.
+# Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2023. All rights reserved.
+#===============================================================================
+
+config ENABLE_WATCHCONTROL
+    bool
+    prompt "Enable watchcontrol."
+    default n
+    depends on WS63_ENABLE
+
+if ENABLE_WATCHCONTROL
+osource "application/ws63/watchcontrol/Kconfig"
+endif
