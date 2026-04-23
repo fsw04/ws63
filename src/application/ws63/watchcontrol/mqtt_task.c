@@ -41,8 +41,8 @@ static void *mqtt_main_task(const char *arg)
     unused(arg);
     int rc;
     
-    // 1. 创建消息队列，用于接收传感器任务发来的字符串数据 (最多缓存16条，每条最大128字节)
-    osal_msg_queue_create("mqtt_queue", 16, &g_mqtt_msg_queue, 0, 128);
+    // 1. 创建消息队列，用于接收传感器任务发来的字符串数据 (最多缓存16条，每条最大1024字节)
+    osal_msg_queue_create("mqtt_queue", 16, &g_mqtt_msg_queue, 0, 1024);
 
     // 2. 初始化 MQTT 客户端
     MQTTClient_init();
@@ -74,16 +74,21 @@ static void *mqtt_main_task(const char *arg)
     MQTTClient_subscribe(client, MQTT_TOPIC_SUB, 1);
 
     // 6. 核心循环：阻塞读取消息队列 -> 收到数据 -> 上报云端
-    char recv_buf[128];
+    char recv_buf[1024];
     while (1) {
         unsigned int read_size = sizeof(recv_buf);
         // 阻塞等待传感器数据
+
         int ret = osal_msg_queue_read_copy(g_mqtt_msg_queue, recv_buf, &read_size, OSAL_WAIT_FOREVER);
         
         if (ret == 0) { // 读取成功
+            if (read_size < sizeof(recv_buf)) {
+                recv_buf[read_size] = '\0';
+            }
+
             MQTTClient_message pubmsg = MQTTClient_message_initializer;
             pubmsg.payload = recv_buf;
-            pubmsg.payloadlen = strlen(recv_buf);
+            pubmsg.payloadlen = read_size;
             pubmsg.qos = 1;
             pubmsg.retained = 0;
             

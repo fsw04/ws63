@@ -436,21 +436,19 @@ static void sle_speed_entry(void)
 // 提供给 sensor_task.c 调用的发送接口
 int sle_client_send_data(const char *payload, uint16_t len)
 {
-    // g_conn_id 是全局变量，在连接成功时已被赋值
-    // g_find_service_result.start_hdl 是全局变量，在寻找服务成功时已被赋值
-    if (g_find_service_result.start_hdl == 0) {
-        osal_printk("[SLE Client] 尚未获取到网关的 Handle，丢弃数据...\r\n");
-        return -1;
-    }
+    // 直接强制使用网关固定的特征句柄 17 (0x11)
+    uint16_t target_handle = 17; 
 
+    // 参数依然使用标准的 SSAP_PROPERTY_TYPE_VALUE
     ssapc_write_param_t param = { 0 };
-    param.handle = g_find_service_result.start_hdl;
-    param.type = SSAP_PROPERTY_TYPE_VALUE;
+    param.handle = target_handle;
+    param.type = SSAP_PROPERTY_TYPE_VALUE; // 这个不用变，就用 VALUE
     param.data_len = len;
     param.data = (uint8_t *)payload;
 
-    // 发送星闪写请求给网关
-    errcode_t ret = ssapc_write_req(0, g_conn_id, &param);
+    // 【核心修改】：把原来的 ssapc_write_req 换成 ssapc_write_cmd！
+    // ssapc_write_cmd 是“无响应写入”，它不要求服务端必须拥有强写入权限，也不会触发 ACK 等待。
+    errcode_t ret = ssapc_write_cmd(0, g_conn_id, &param);
     return ret;
 }
 

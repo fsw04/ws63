@@ -140,7 +140,11 @@ static void ssaps_write_request_cbk(uint8_t server_id, uint16_t conn_id, ssaps_r
     if (write_cb_para != NULL && write_cb_para->length > 0 && write_cb_para->value != NULL) {
         osal_printk("[SLE Gateway] 收到星闪数据，长度: %d\r\n", write_cb_para->length);
         
-        // 【核心】：把收到的李桂芳 JSON 数据压入 MQTT 发送队列！
+        // 【核心修改】：使用 %.*s，传入 length 作为限制，保证绝对不会内存越界！
+        osal_printk("[SLE Gateway] 收到星闪数据，内容: %.*s\r\n", 
+                    write_cb_para->length, (char *)write_cb_para->value);
+        
+        // 把收到的李桂芳 JSON 数据压入 MQTT 发送队列！
         osal_msg_queue_write_copy(g_mqtt_msg_queue, write_cb_para->value, write_cb_para->length, 0);
     }
 }
