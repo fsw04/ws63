@@ -69,6 +69,9 @@ static sle_link_qos_state_t g_sle_link_state = 0;  /* sle link state */
 #define SPEED_DEFAULT_TIMEOUT_MULTIPLIER 0x1f4
 #define DEFAULT_SLE_SPEED_MCS 10
 #define WAIT_MCS_SET 2000
+// 引入广播控制宏，如果文件中没有的话
+#define SLE_ADV_HANDLE_DEFAULT 1
+
 static unsigned char data[PKT_DATA_LEN];
 
 static uint8_t sle_uuid_base[] = { 0x37, 0xBE, 0xA8, 0x80, 0xFC, 0x70, 0x11, 0xEA, \
@@ -87,14 +90,14 @@ static void sle_uuid_setu2(uint16_t u2, sle_uuid_t *out)
     encode2byte_little(&out->uuid[14], u2);
 }
 
-static void destroy_send_data_thread(void)
-{
-    if (g_task_handle != NULL) {
-        osal_kthread_destroy(g_task_handle, 1);
-        osal_kfree(g_task_handle);
-        g_task_handle = NULL;
-    }
-}
+// static void destroy_send_data_thread(void)
+// {
+//     if (g_task_handle != NULL) {
+//         osal_kthread_destroy(g_task_handle, 1);
+//         osal_kfree(g_task_handle);
+//         g_task_handle = NULL;
+//     }
+// }
 
 // static void ssaps_read_request_cbk(uint8_t server_id, uint16_t conn_id, ssaps_req_read_cb_t *read_cb_para,
 //     errcode_t status)
@@ -333,24 +336,53 @@ static errcode_t sle_uuid_server_add(void)
     return ERRCODE_SLE_SUCCESS;
 }
 
+// static void sle_connect_state_changed_cbk(uint16_t conn_id, const sle_addr_t *addr,
+//     sle_acb_state_t conn_state, sle_pair_state_t pair_state, sle_disc_reason_t disc_reason)
+// {
+//     osal_printk("[speed server] connect state changed conn_id:0x%02x, conn_state:0x%x, pair_state:0x%x, 
+//         disc_reason:0x%x\r\n", conn_id, conn_state, pair_state, disc_reason);
+//     osal_printk("[speed server] connect state changed addr:0x%02x:**:**:**:0x%02x:0x%02x\r\n",
+//         addr->addr[BT_INDEX_0], addr->addr[BT_INDEX_4], addr->addr[BT_INDEX_5]);
+//     g_sle_conn_hdl = conn_id;
+//     sle_connection_param_update_t parame = {0};
+//     parame.conn_id = conn_id;
+//     parame.interval_min = SPEED_DEFAULT_CONN_INTERVAL;
+//     parame.interval_max = SPEED_DEFAULT_CONN_INTERVAL;
+//     parame.max_latency = 0;
+//     parame.supervision_timeout = SPEED_DEFAULT_TIMEOUT_MULTIPLIER;
+//     if (conn_state ==  SLE_ACB_STATE_CONNECTED) {
+//         sle_update_connect_param(&parame);
+//     } else if (conn_state == SLE_ACB_STATE_DISCONNECTED) {
+//         destroy_send_data_thread();
+//         sle_start_announce(SLE_ADV_HANDLE_DEFAULT);
+//     }
+// }
+
 static void sle_connect_state_changed_cbk(uint16_t conn_id, const sle_addr_t *addr,
-    sle_acb_state_t conn_state, sle_pair_state_t pair_state, sle_disc_reason_t disc_reason)
+                                          sle_acb_state_t conn_state, sle_pair_state_t pair_state,
+                                          sle_disc_reason_t disc_reason)
 {
-    osal_printk("[speed server] connect state changed conn_id:0x%02x, conn_state:0x%x, pair_state:0x%x, \
-        disc_reason:0x%x\r\n", conn_id, conn_state, pair_state, disc_reason);
-    osal_printk("[speed server] connect state changed addr:0x%02x:**:**:**:0x%02x:0x%02x\r\n",
-        addr->addr[BT_INDEX_0], addr->addr[BT_INDEX_4], addr->addr[BT_INDEX_5]);
-    g_sle_conn_hdl = conn_id;
-    sle_connection_param_update_t parame = {0};
-    parame.conn_id = conn_id;
-    parame.interval_min = SPEED_DEFAULT_CONN_INTERVAL;
-    parame.interval_max = SPEED_DEFAULT_CONN_INTERVAL;
-    parame.max_latency = 0;
-    parame.supervision_timeout = SPEED_DEFAULT_TIMEOUT_MULTIPLIER;
-    if (conn_state ==  SLE_ACB_STATE_CONNECTED) {
-        sle_update_connect_param(&parame);
-    } else if (conn_state == SLE_ACB_STATE_DISCONNECTED) {
-        destroy_send_data_thread();
+    (void)addr;
+
+    osal_printk("%s conn state changed conn_id: %d, conn_state: %d, pair_state: %d, disc_reason: %d\n",
+                __func__, conn_id, conn_state, pair_state, disc_reason);
+                
+    if (conn_state == SLE_ACB_STATE_CONNECTED) {
+        osal_printk("[SLE Server] 节点已连接! conn_id: %d\n", conn_id);
+        g_sle_conn_hdl = conn_id; // 注意：如果需要向特定节点发数据，建议用数组维护 g_sle_conn_id[conn_id]
+        
+        // 【核心修改 1】: 连接成功后，重新开启广播，允许其他设备继续连接
+        errcode_t ret = sle_start_announce(SLE_ADV_HANDLE_DEFAULT);
+        if (ret == ERRCODE_SUCC) {
+            osal_printk("[SLE Server] 重新开启广播成功，等待下一个设备连接...\n");
+        } else {
+            osal_printk("[SLE Server] 重新开启广播失败，错误码: %d\n", ret);
+        }
+
+    } else if (conn_state == SLE_ACB_STATE_NONE) {
+        osal_printk("[SLE Server] 节点断开! conn_id: %d\n", conn_id);
+        
+        // 【核心修改 2】: 断开连接时，确保广播处于开启状态
         sle_start_announce(SLE_ADV_HANDLE_DEFAULT);
     }
 }
