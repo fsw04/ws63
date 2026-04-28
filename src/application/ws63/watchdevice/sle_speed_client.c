@@ -18,6 +18,9 @@
 
 #include "sle_speed_client.h"
 
+// 在文件头部引入 Wi-Fi 接口
+#include "wifi_device.h"
+
 #undef THIS_FILE_ID
 #define THIS_FILE_ID BTH_GLE_SAMPLE_UUID_CLIENT
 
@@ -80,14 +83,43 @@ void sle_start_scan(void)
     sle_start_seek();
 }
 
+// void sle_sample_sle_enable_cbk(errcode_t status)
+// {
+//     if (status == 0) {
+//         uint8_t local_addr[SLE_ADDR_LEN] = {0x13, 0x67, 0x5c, 0x07, 0x00, 0x51};
+//         sle_addr_t local_address;
+//         local_address.type = 0;
+//         (void)memcpy_s(local_address.addr, SLE_ADDR_LEN, local_addr, SLE_ADDR_LEN);
+//         sle_set_local_addr(&local_address);
+//         sle_speed_connect_param_init();
+//         sle_start_scan();
+//     }
+// }
+
 void sle_sample_sle_enable_cbk(errcode_t status)
 {
     if (status == 0) {
-        uint8_t local_addr[SLE_ADDR_LEN] = {0x13, 0x67, 0x5c, 0x07, 0x00, 0x51};
         sle_addr_t local_address;
         local_address.type = 0;
-        (void)memcpy_s(local_address.addr, SLE_ADDR_LEN, local_addr, SLE_ADDR_LEN);
+        
+        // 尝试从芯片底层读取出厂的 Base MAC 地址
+        int8_t chip_mac[6] = {0};
+        errcode_t ret = wifi_get_base_mac_addr(chip_mac, 6);
+        
+        if (ret == ERRCODE_SUCC) {
+            osal_printk("[SLE Client] 成功读取芯片 MAC: %02X:%02X:%02X:%02X:%02X:%02X\r\n", 
+                        (uint8_t)chip_mac[0], (uint8_t)chip_mac[1], (uint8_t)chip_mac[2], 
+                        (uint8_t)chip_mac[3], (uint8_t)chip_mac[4], (uint8_t)chip_mac[5]);
+            (void)memcpy_s(local_address.addr, SLE_ADDR_LEN, chip_mac, SLE_ADDR_LEN);
+        } else {
+            osal_printk("[SLE Client] 读取芯片 MAC 失败，使用默认随机地址!\r\n");
+            // 如果读取失败，使用一个伪随机或者硬编码备用
+            uint8_t fallback_addr[SLE_ADDR_LEN] = {0x13, 0x67, 0x5c, 0x07, 0x00, 0x51};
+            (void)memcpy_s(local_address.addr, SLE_ADDR_LEN, fallback_addr, SLE_ADDR_LEN);
+        }
+
         sle_set_local_addr(&local_address);
+        
         sle_speed_connect_param_init();
         sle_start_scan();
     }
@@ -107,14 +139,25 @@ void sle_sample_seek_disable_cbk(errcode_t status)
     }
 }
 
+// void sle_sample_seek_result_info_cbk(sle_seek_result_info_t *seek_result_data)
+// {
+//     if (seek_result_data != NULL) {
+//         uint8_t mac[SLE_ADDR_LEN] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+//         if (memcmp(seek_result_data->addr.addr, mac, SLE_ADDR_LEN) == 0) {
+//             (void)memcpy_s(&g_remote_addr, sizeof(sle_addr_t), &seek_result_data->addr, sizeof(sle_addr_t));
+//             sle_stop_seek();
+//         }
+//     }
+// }
+
 void sle_sample_seek_result_info_cbk(sle_seek_result_info_t *seek_result_data)
 {
     if (seek_result_data != NULL) {
-        uint8_t mac[SLE_ADDR_LEN] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
-        if (memcmp(seek_result_data->addr.addr, mac, SLE_ADDR_LEN) == 0) {
-            (void)memcpy_s(&g_remote_addr, sizeof(sle_addr_t), &seek_result_data->addr, sizeof(sle_addr_t));
-            sle_stop_seek();
-        }
+        // 原来的死逻辑，现在网关 MAC 变了，我们需要通过寻找特定的 UUID 或者广播名来匹配！       
+        // 【修改点】：取消 MAC 强绑定，直接连接扫描到的第一个网关 (对于测试最简单)
+        // 或者通过解析 seek_result_data->data 中的名字 "sle_speed_server" 来匹配
+        (void)memcpy_s(&g_remote_addr, sizeof(sle_addr_t), &seek_result_data->addr, sizeof(sle_addr_t));
+        sle_stop_seek();
     }
 }
 

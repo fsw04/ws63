@@ -18,10 +18,10 @@ static void get_local_mac_str(char *mac_str, uint32_t len) {
     // 获取本地 SLE 地址
     errcode_t ret = sle_get_local_addr(&local_addr);
     if (ret == ERRCODE_SUCC) {
-        // 格式化为 12 位十六进制字符串 (例如: A1B2C3D4E5F6)
+        // 格式化为 12 位十六进制字符串，例如 5200075C6713
         snprintf(mac_str, len, "%02X%02X%02X%02X%02X%02X",
-                 local_addr.addr[5], local_addr.addr[4], local_addr.addr[3],
-                 local_addr.addr[2], local_addr.addr[1], local_addr.addr[0]);
+                 local_addr.addr[0], local_addr.addr[1], local_addr.addr[2],
+                 local_addr.addr[3], local_addr.addr[4], local_addr.addr[5]);
     } else {
         // 获取失败时的 fallback
         snprintf(mac_str, len, "UNKNOWN_MAC");

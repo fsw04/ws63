@@ -13,6 +13,8 @@
 #include "sle_speed_server.h"
 #include "sle_speed_server_adv.h"
 
+#include "wifi_device.h"
+
 /* sle device name */
 #define NAME_MAX_LENGTH 15
 /* 连接调度间隔2.5ms，单位125us */
@@ -65,10 +67,42 @@ uint8_t g_sle_scan_rsp_data[] = {
     's', 'l', 'e', '_', 's', 'p', 'e', 'e', 'd', '_', 's', 'e', 'r', 'v', 'e', 'r'
 };
 
+// static int sle_set_default_announce_param(void)
+// {
+//     sle_announce_param_t param = {0};
+//     uint8_t mac[SLE_ADDR_LEN] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+//     param.announce_mode = SLE_ANNOUNCE_MODE_CONNECTABLE_SCANABLE;
+//     param.announce_handle = SLE_ADV_HANDLE_DEFAULT;
+//     param.announce_gt_role = SLE_ANNOUNCE_ROLE_T_CAN_NEGO;
+//     param.announce_level = SLE_ANNOUNCE_LEVEL_NORMAL;
+//     param.announce_channel_map = SLE_ADV_CHANNEL_MAP_DEFAULT;
+//     param.announce_interval_min = SLE_ADV_INTERVAL_MIN_DEFAULT;
+//     param.announce_interval_max = SLE_ADV_INTERVAL_MAX_DEFAULT;
+//     param.conn_interval_min = SLE_CONN_INTV_MIN_DEFAULT;
+//     param.conn_interval_max = SLE_CONN_INTV_MAX_DEFAULT;
+//     param.conn_max_latency = SLE_CONN_MAX_LATENCY;
+//     param.conn_supervision_timeout = SLE_CONN_SUPERVISION_TIMEOUT_DEFAULT;
+//     param.announce_tx_power = SLE_ADV_TX_POWER;
+//     param.own_addr.type = 0;
+//     memcpy_s(param.own_addr.addr, SLE_ADDR_LEN, mac, SLE_ADDR_LEN);
+//     return sle_set_announce_param(param.announce_handle, &param);
+// }
+
 static int sle_set_default_announce_param(void)
 {
     sle_announce_param_t param = {0};
-    uint8_t mac[SLE_ADDR_LEN] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+    
+    // 【修改点】：不再使用硬编码的 11:22:33:44:55:66
+    // uint8_t mac[SLE_ADDR_LEN] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+    
+    // 调用底层的接口读取本机的实际 MAC
+    int8_t chip_mac[6] = {0};
+    if (wifi_get_base_mac_addr(chip_mac, 6) != ERRCODE_SUCC) {
+        // 如果失败，给一个特定的 Server 默认 MAC
+        uint8_t fallback_mac[SLE_ADDR_LEN] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+        memcpy_s(chip_mac, SLE_ADDR_LEN, fallback_mac, SLE_ADDR_LEN);
+    }
+
     param.announce_mode = SLE_ANNOUNCE_MODE_CONNECTABLE_SCANABLE;
     param.announce_handle = SLE_ADV_HANDLE_DEFAULT;
     param.announce_gt_role = SLE_ANNOUNCE_ROLE_T_CAN_NEGO;
@@ -82,7 +116,7 @@ static int sle_set_default_announce_param(void)
     param.conn_supervision_timeout = SLE_CONN_SUPERVISION_TIMEOUT_DEFAULT;
     param.announce_tx_power = SLE_ADV_TX_POWER;
     param.own_addr.type = 0;
-    memcpy_s(param.own_addr.addr, SLE_ADDR_LEN, mac, SLE_ADDR_LEN);
+    memcpy_s(param.own_addr.addr, SLE_ADDR_LEN, chip_mac, SLE_ADDR_LEN);
     return sle_set_announce_param(param.announce_handle, &param);
 }
 
