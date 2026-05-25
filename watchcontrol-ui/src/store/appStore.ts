@@ -12,6 +12,12 @@ export interface WatchDevice {
   borrowedAt: number
 }
 
+export interface DiscoveredDevice {
+  mac: string
+  name: string
+  rssi: number
+}
+
 export interface SystemStatus {
   wifi: {
     connected: boolean
@@ -45,6 +51,7 @@ export type TabType = 'status' | 'devices' | 'logs'
 interface AppStore {
   systemStatus: SystemStatus
   devices: WatchDevice[]
+  discoveredDevices: DiscoveredDevice[]
   logs: LogEntry[]
   activeTab: TabType
   requestModalOpen: boolean
@@ -52,6 +59,7 @@ interface AppStore {
   wifiModalOpen: boolean
   addDeviceModalOpen: boolean
   wifiConnecting: boolean
+  sleScanning: boolean
   selectedDeviceId: string | null
   setActiveTab: (tab: TabType) => void
   setRequestModalOpen: (open: boolean) => void
@@ -65,6 +73,9 @@ interface AppStore {
   connectWifi: (ssid: string, password: string) => void
   disconnectWifi: () => void
   addDevice: (name: string, mac: string) => void
+  connectDiscoveredDevice: (mac: string) => void
+  startSleScan: () => void
+  stopSleScan: () => void
 }
 
 const mockDevices: WatchDevice[] = [
@@ -199,9 +210,10 @@ const mockLogs: LogEntry[] = [
   },
 ]
 
-export const useAppStore = create<AppStore>((set) => ({
+export const useAppStore = create<AppStore>((set, get) => ({
   systemStatus: mockStatus,
   devices: mockDevices,
+  discoveredDevices: [],
   logs: mockLogs,
   activeTab: 'status',
   requestModalOpen: false,
@@ -209,12 +221,13 @@ export const useAppStore = create<AppStore>((set) => ({
   wifiModalOpen: false,
   addDeviceModalOpen: false,
   wifiConnecting: false,
+  sleScanning: false,
   selectedDeviceId: null,
   setActiveTab: (tab) => set({ activeTab: tab }),
   setRequestModalOpen: (open) => set({ requestModalOpen: open }),
   setReturnModalOpen: (open) => set({ returnModalOpen: open }),
   setWifiModalOpen: (open) => set({ wifiModalOpen: open }),
-  setAddDeviceModalOpen: (open) => set({ addDeviceModalOpen: open }),
+  setAddDeviceModalOpen: (open) => set({ addDeviceModalOpen: open, discoveredDevices: [] }),
   setSelectedDeviceId: (id) => set({ selectedDeviceId: id }),
   addLog: (entry) =>
     set((state) => ({
@@ -337,6 +350,145 @@ export const useAppStore = create<AppStore>((set) => ({
           type: 'device' as const,
           level: 'info' as const,
           message: `设备 ${name} (${mac}) 已添加`,
+        },
+      ],
+    }))
+  },
+  connectDiscoveredDevice: (mac) => {
+    const { discoveredDevices, devices } = get()
+    const discoveredDevice = discoveredDevices.find(d => d.mac === mac)
+    if (!discoveredDevice) return
+
+    const deviceId = `watch_${mac.replace(/:/g, '')}`
+    const existingDevice = devices.find(d => d.mac === mac)
+
+    if (existingDevice) {
+      set((state) => ({
+        devices: state.devices.map(d => 
+          d.mac === mac 
+            ? { ...d, connected: true } 
+            : d
+        ),
+        systemStatus: {
+          ...state.systemStatus,
+          sle: {
+            ...state.systemStatus.sle,
+            connectedDevices: state.systemStatus.sle.connectedDevices + 1,
+          },
+        },
+        addDeviceModalOpen: false,
+        logs: [
+          ...state.logs,
+          {
+            id: String(state.logs.length + 1),
+            timestamp: Date.now(),
+            type: 'sle' as const,
+            level: 'info' as const,
+            message: `设备 ${discoveredDevice.name} 已连接`,
+          },
+        ],
+      }))
+    } else {
+      set((state) => ({
+        devices: [
+          ...state.devices,
+          {
+            deviceId,
+            mac,
+            name: discoveredDevice.name,
+            connected: true,
+            status: 'idle',
+            borrowedBy: '',
+            borrowedAt: 0,
+          },
+        ],
+        systemStatus: {
+          ...state.systemStatus,
+          sle: {
+            ...state.systemStatus.sle,
+            connectedDevices: state.systemStatus.sle.connectedDevices + 1,
+          },
+        },
+        addDeviceModalOpen: false,
+        logs: [
+          ...state.logs,
+          {
+            id: String(state.logs.length + 1),
+            timestamp: Date.now(),
+            type: 'device' as const,
+            level: 'info' as const,
+            message: `设备 ${discoveredDevice.name} (${mac}) 已添加并连接`,
+          },
+        ],
+      }))
+    }
+  },
+  startSleScan: () => {
+    set({ sleScanning: true })
+    set((state) => ({
+      logs: [
+        ...state.logs,
+        {
+          id: String(state.logs.length + 1),
+          timestamp: Date.now(),
+          type: 'sle' as const,
+          level: 'info' as const,
+          message: '开始扫描附近的SLE设备...',
+        },
+      ],
+    }))
+    
+    const mockDiscoveredDevices: DiscoveredDevice[] = [
+      { mac: '6B:2C:4F:8E:1A:7D', name: '手表-05', rssi: -45 },
+      { mac: '3A:7D:9B:2E:5C:8F', name: '手表-06', rssi: -62 },
+      { mac: '8F:1A:3E:7B:2C:9D', name: '手表-07', rssi: -78 },
+    ]
+
+    let currentIndex = 0
+    const interval = setInterval(() => {
+      const { sleScanning } = get()
+      if (!sleScanning) {
+        clearInterval(interval)
+        return
+      }
+      
+      if (currentIndex < mockDiscoveredDevices.length) {
+        const device = mockDiscoveredDevices[currentIndex]
+        set((state) => {
+          const exists = state.discoveredDevices.some(d => d.mac === device.mac)
+          if (!exists) {
+            return {
+              discoveredDevices: [...state.discoveredDevices, device],
+            }
+          }
+          return {}
+        })
+        currentIndex++
+      } else {
+        set((state) => {
+          const randomIndex = Math.floor(Math.random() * state.discoveredDevices.length)
+          return {
+            discoveredDevices: state.discoveredDevices.map((d, i) => 
+              i === randomIndex 
+                ? { ...d, rssi: Math.floor(Math.random() * 30 + 40) * -1 } 
+                : d
+            ),
+          }
+        })
+      }
+    }, 800)
+  },
+  stopSleScan: () => {
+    set({ sleScanning: false })
+    set((state) => ({
+      logs: [
+        ...state.logs,
+        {
+          id: String(state.logs.length + 1),
+          timestamp: Date.now(),
+          type: 'sle' as const,
+          level: 'info' as const,
+          message: '扫描已停止',
         },
       ],
     }))
