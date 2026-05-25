@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Noto Sans SC', system-ui, sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0A0E1A;
+  color: #E2E8F0;
+  overflow: hidden;
+  width: 320px;
+  height: 480px;
+  margin: 0 auto;
+}
+
+#root {
+  width: 320px;
+  height: 480px;
+  overflow: hidden;
+  position: relative;
+}
+
+::-webkit-scrollbar {
+  width: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(78, 205, 196, 0.3);
+  border-radius: 3px;
+}
+
+@layer components {
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-dot-online {
+    @apply bg-accent-green animate-pulse-slow;
+    box-shadow: 0 0 6px rgba(0, 229, 160, 0.5);
+  }
+
+  .status-dot-offline {
+    @apply bg-accent-red;
+    box-shadow: 0 0 6px rgba(255, 107, 107, 0.5);
+  }
+
+  .card {
+    @apply bg-base-800 rounded-xl p-3 border border-base-600/30;
+  }
+
+  .vital-card {
+    @apply bg-base-700/60 rounded-lg p-2.5 border border-base-600/20;
+  }
+
+  .tab-active {
+    @apply text-accent-green;
+  }
+
+  .tab-inactive {
+    @apply text-gray-500;
+  }
+}
