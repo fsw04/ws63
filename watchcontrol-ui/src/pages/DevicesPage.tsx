@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Watch, ArrowDownToLine, ArrowUpFromLine, X, User, Plus, Trash2 } from 'lucide-react'
 import { useAppStore, type DeviceStatus } from '@/store/appStore'
 import AddDeviceModal from '@/components/AddDeviceModal'
@@ -13,6 +13,14 @@ const statusConfig: Record<DeviceStatus, { label: string; color: string; bgColor
 function DeviceRow({ device }: { device: ReturnType<typeof useAppStore.getState>['devices'][0] }) {
   const { setRequestModalOpen, setReturnModalOpen, setDeleteModalOpen, setSelectedDeviceId } = useAppStore()
   const config = statusConfig[device.status]
+  
+  const [isDragging, setIsDragging] = useState(false)
+  const [translateX, setTranslateX] = useState(0)
+  const [startX, setStartX] = useState(0)
+  const [currentX, setCurrentX] = useState(0)
+  const dragRef = useRef<HTMLDivElement>(null)
+  
+  const DELETE_THRESHOLD = 80
 
   const handleRequest = () => {
     setSelectedDeviceId(device.deviceId)
@@ -29,59 +37,161 @@ function DeviceRow({ device }: { device: ReturnType<typeof useAppStore.getState>
     setDeleteModalOpen(true)
   }
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setStartX(e.touches[0].clientX)
+    setCurrentX(e.touches[0].clientX)
+    setIsDragging(true)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return
+    const newX = e.touches[0].clientX
+    const diff = newX - startX
+    
+    let newTranslateX = diff
+    if (newTranslateX > 0) newTranslateX = 0
+    if (newTranslateX < -DELETE_THRESHOLD - 40) newTranslateX = -DELETE_THRESHOLD - 40
+    
+    setTranslateX(newTranslateX)
+    setCurrentX(newX)
+  }
+
+  const handleTouchEnd = () => {
+    setIsDragging(false)
+    if (translateX < -DELETE_THRESHOLD) {
+      setTranslateX(-DELETE_THRESHOLD)
+    } else {
+      setTranslateX(0)
+    }
+  }
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setStartX(e.clientX)
+    setCurrentX(e.clientX)
+    setIsDragging(true)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return
+    const newX = e.clientX
+    const diff = newX - startX
+    
+    let newTranslateX = diff
+    if (newTranslateX > 0) newTranslateX = 0
+    if (newTranslateX < -DELETE_THRESHOLD - 40) newTranslateX = -DELETE_THRESHOLD - 40
+    
+    setTranslateX(newTranslateX)
+    setCurrentX(newX)
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+    if (translateX < -DELETE_THRESHOLD) {
+      setTranslateX(-DELETE_THRESHOLD)
+    } else {
+      setTranslateX(0)
+    }
+  }
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false)
+      if (translateX < -DELETE_THRESHOLD) {
+        setTranslateX(-DELETE_THRESHOLD)
+      } else {
+        setTranslateX(0)
+      }
+    }
+  }
+
+  const handleReset = () => {
+    setTranslateX(0)
+  }
+
   const canRequest = device.status === 'idle' && device.connected
   const canReturn = device.status === 'borrowed'
 
   return (
-    <div className="card flex items-center gap-2.5 py-2.5">
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${device.connected ? 'bg-accent-green/10' : 'bg-gray-700/50'}`}>
-        <Watch size={16} className={device.connected ? 'text-accent-green' : 'text-gray-600'} />
+    <div className="relative overflow-hidden">
+      <div 
+        className="absolute right-0 top-0 bottom-0 flex items-center justify-end bg-accent-red"
+        style={{ width: DELETE_THRESHOLD }}
+      >
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleDelete()
+          }}
+          className="w-full h-full flex items-center justify-center"
+        >
+          <Trash2 size={16} className="text-white" />
+        </button>
       </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-medium text-gray-200 truncate">{device.name}</span>
-          <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${config.color} ${config.bgColor}`}>
-            {config.label}
-          </span>
+      
+      <div
+        ref={dragRef}
+        className="card flex items-center gap-2.5 py-2.5 relative z-10"
+        style={{
+          transform: `translateX(${translateX}px)`,
+          transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleReset}
+      >
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${device.connected ? 'bg-accent-green/10' : 'bg-gray-700/50'}`}>
+          <Watch size={16} className={device.connected ? 'text-accent-green' : 'text-gray-600'} />
         </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <div className="flex items-center gap-1">
-            <span className={`status-dot ${device.connected ? 'status-dot-online' : 'status-dot-offline'}`} />
-            <span className="text-[9px] text-gray-500">{device.connected ? '已连接' : '离线'}</span>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-medium text-gray-200 truncate">{device.name}</span>
+            <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${config.color} ${config.bgColor}`}>
+              {config.label}
+            </span>
           </div>
-          {device.borrowedBy && (
-            <span className="text-[9px] text-gray-600">借用人: {device.borrowedBy}</span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-1">
+              <span className={`status-dot ${device.connected ? 'status-dot-online' : 'status-dot-offline'}`} />
+              <span className="text-[9px] text-gray-500">{device.connected ? '已连接' : '离线'}</span>
+            </div>
+            {device.borrowedBy && (
+              <span className="text-[9px] text-gray-600">借用人: {device.borrowedBy}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-1.5 flex-shrink-0">
+          {canRequest && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleRequest()
+              }}
+              className="w-8 h-8 rounded-lg bg-accent-green/10 flex items-center justify-center hover:bg-accent-green/20 transition-colors active:scale-95"
+              title="申请设备"
+            >
+              <ArrowDownToLine size={14} className="text-accent-green" />
+            </button>
+          )}
+          {canReturn && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleReturn()
+              }}
+              className="w-8 h-8 rounded-lg bg-accent-yellow/10 flex items-center justify-center hover:bg-accent-yellow/20 transition-colors active:scale-95"
+              title="返还设备"
+            >
+              <ArrowUpFromLine size={14} className="text-accent-yellow" />
+            </button>
           )}
         </div>
-      </div>
-
-      <div className="flex gap-1.5 flex-shrink-0">
-        {canRequest && (
-          <button
-            onClick={handleRequest}
-            className="w-8 h-8 rounded-lg bg-accent-green/10 flex items-center justify-center hover:bg-accent-green/20 transition-colors active:scale-95"
-            title="申请设备"
-          >
-            <ArrowDownToLine size={14} className="text-accent-green" />
-          </button>
-        )}
-        {canReturn && (
-          <button
-            onClick={handleReturn}
-            className="w-8 h-8 rounded-lg bg-accent-yellow/10 flex items-center justify-center hover:bg-accent-yellow/20 transition-colors active:scale-95"
-            title="返还设备"
-          >
-            <ArrowUpFromLine size={14} className="text-accent-yellow" />
-          </button>
-        )}
-        <button
-          onClick={handleDelete}
-          className="w-8 h-8 rounded-lg bg-accent-red/10 flex items-center justify-center hover:bg-accent-red/20 transition-colors active:scale-95"
-          title="删除设备"
-        >
-          <Trash2 size={14} className="text-accent-red" />
-        </button>
       </div>
     </div>
   )
