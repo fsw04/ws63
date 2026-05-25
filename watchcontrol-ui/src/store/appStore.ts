@@ -58,6 +58,7 @@ interface AppStore {
   returnModalOpen: boolean
   wifiModalOpen: boolean
   addDeviceModalOpen: boolean
+  deleteModalOpen: boolean
   wifiConnecting: boolean
   sleScanning: boolean
   selectedDeviceId: string | null
@@ -66,6 +67,7 @@ interface AppStore {
   setReturnModalOpen: (open: boolean) => void
   setWifiModalOpen: (open: boolean) => void
   setAddDeviceModalOpen: (open: boolean) => void
+  setDeleteModalOpen: (open: boolean) => void
   setSelectedDeviceId: (id: string | null) => void
   addLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void
   requestDevice: (deviceId: string, borrower: string) => void
@@ -76,6 +78,7 @@ interface AppStore {
   connectDiscoveredDevice: (mac: string) => void
   startSleScan: () => void
   stopSleScan: () => void
+  deleteDevice: (deviceId: string) => void
 }
 
 const mockDevices: WatchDevice[] = [
@@ -220,6 +223,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   returnModalOpen: false,
   wifiModalOpen: false,
   addDeviceModalOpen: false,
+  deleteModalOpen: false,
   wifiConnecting: false,
   sleScanning: false,
   selectedDeviceId: null,
@@ -228,6 +232,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setReturnModalOpen: (open) => set({ returnModalOpen: open }),
   setWifiModalOpen: (open) => set({ wifiModalOpen: open }),
   setAddDeviceModalOpen: (open) => set({ addDeviceModalOpen: open, discoveredDevices: [] }),
+  setDeleteModalOpen: (open) => set({ deleteModalOpen: open }),
   setSelectedDeviceId: (id) => set({ selectedDeviceId: id }),
   addLog: (entry) =>
     set((state) => ({
@@ -489,6 +494,38 @@ export const useAppStore = create<AppStore>((set, get) => ({
           type: 'sle' as const,
           level: 'info' as const,
           message: '扫描已停止',
+        },
+      ],
+    }))
+  },
+  deleteDevice: (deviceId) => {
+    const { devices, systemStatus } = get()
+    const deviceToDelete = devices.find(d => d.deviceId === deviceId)
+    
+    if (!deviceToDelete) return
+
+    // 调整已连接设备计数
+    const connectionChange = deviceToDelete.connected ? -1 : 0
+    
+    set((state) => ({
+      devices: state.devices.filter(d => d.deviceId !== deviceId),
+      systemStatus: {
+        ...state.systemStatus,
+        sle: {
+          ...state.systemStatus.sle,
+          connectedDevices: state.systemStatus.sle.connectedDevices + connectionChange,
+        },
+      },
+      deleteModalOpen: false,
+      selectedDeviceId: null,
+      logs: [
+        ...state.logs,
+        {
+          id: String(state.logs.length + 1),
+          timestamp: Date.now(),
+          type: 'device' as const,
+          level: 'warn' as const,
+          message: `设备 ${deviceToDelete.name} (${deviceToDelete.mac}) 已删除`,
         },
       ],
     }))

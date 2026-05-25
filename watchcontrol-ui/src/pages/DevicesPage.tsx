@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Watch, ArrowDownToLine, ArrowUpFromLine, X, User, Plus } from 'lucide-react'
+import { Watch, ArrowDownToLine, ArrowUpFromLine, X, User, Plus, Trash2 } from 'lucide-react'
 import { useAppStore, type DeviceStatus } from '@/store/appStore'
 import AddDeviceModal from '@/components/AddDeviceModal'
 
@@ -11,7 +11,7 @@ const statusConfig: Record<DeviceStatus, { label: string; color: string; bgColor
 }
 
 function DeviceRow({ device }: { device: ReturnType<typeof useAppStore.getState>['devices'][0] }) {
-  const { setRequestModalOpen, setReturnModalOpen, setSelectedDeviceId } = useAppStore()
+  const { setRequestModalOpen, setReturnModalOpen, setDeleteModalOpen, setSelectedDeviceId } = useAppStore()
   const config = statusConfig[device.status]
 
   const handleRequest = () => {
@@ -22,6 +22,11 @@ function DeviceRow({ device }: { device: ReturnType<typeof useAppStore.getState>
   const handleReturn = () => {
     setSelectedDeviceId(device.deviceId)
     setReturnModalOpen(true)
+  }
+
+  const handleDelete = () => {
+    setSelectedDeviceId(device.deviceId)
+    setDeleteModalOpen(true)
   }
 
   const canRequest = device.status === 'idle' && device.connected
@@ -70,6 +75,13 @@ function DeviceRow({ device }: { device: ReturnType<typeof useAppStore.getState>
             <ArrowUpFromLine size={14} className="text-accent-yellow" />
           </button>
         )}
+        <button
+          onClick={handleDelete}
+          className="w-8 h-8 rounded-lg bg-accent-red/10 flex items-center justify-center hover:bg-accent-red/20 transition-colors active:scale-95"
+          title="删除设备"
+        >
+          <Trash2 size={14} className="text-accent-red" />
+        </button>
       </div>
     </div>
   )
@@ -224,6 +236,69 @@ function ReturnModal() {
   )
 }
 
+function DeleteModal() {
+  const { deleteModalOpen, setDeleteModalOpen, selectedDeviceId, devices, deleteDevice } = useAppStore()
+
+  if (!deleteModalOpen) return null
+
+  const device = devices.find((d) => d.deviceId === selectedDeviceId)
+  if (!device) return null
+
+  const handleConfirm = () => {
+    deleteDevice(device.deviceId)
+  }
+
+  const handleClose = () => {
+    setDeleteModalOpen(false)
+  }
+
+  return (
+    <div className="absolute inset-0 z-50 flex items-end justify-center" onClick={handleClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full bg-base-800 rounded-t-2xl p-4 animate-slide-up border-t border-base-600/30"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-gray-200">删除设备</span>
+          <button onClick={handleClose} className="w-6 h-6 rounded-full bg-base-700 flex items-center justify-center hover:bg-base-600 transition-colors">
+            <X size={12} className="text-gray-400" />
+          </button>
+        </div>
+
+        <div className="card mb-3 flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-accent-red/10 flex items-center justify-center">
+            <Watch size={14} className="text-accent-red" />
+          </div>
+          <div>
+            <div className="text-[11px] font-medium text-gray-300">{device.name}</div>
+            <div className="text-[9px] text-gray-500 font-mono">{device.mac}</div>
+          </div>
+        </div>
+
+        <p className="text-[10px] text-gray-500 mb-3">
+          确认删除该设备？此操作不可恢复。
+        </p>
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleClose}
+            className="flex-1 py-2.5 rounded-xl text-[11px] font-medium bg-base-700 text-gray-400 hover:bg-base-600 transition-colors active:scale-[0.98]"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="flex-1 py-2.5 rounded-xl text-[11px] font-medium bg-accent-red text-base-900 hover:brightness-110 transition-all active:scale-[0.98]"
+          >
+            确认删除
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function DevicesPage() {
   const { devices, setAddDeviceModalOpen } = useAppStore()
 
@@ -259,6 +334,7 @@ export default function DevicesPage() {
 
       <RequestModal />
       <ReturnModal />
+      <DeleteModal />
       <AddDeviceModal />
     </div>
   )
