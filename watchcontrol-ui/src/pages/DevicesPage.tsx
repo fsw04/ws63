@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Watch, ArrowDownToLine, ArrowUpFromLine, X, User } from 'lucide-react'
+import { Watch, ArrowDownToLine, ArrowUpFromLine, X, User, Plus } from 'lucide-react'
 import { useAppStore, type DeviceStatus } from '@/store/appStore'
+import AddDeviceModal from '@/components/AddDeviceModal'
 
 const statusConfig: Record<DeviceStatus, { label: string; color: string; bgColor: string }> = {
   idle: { label: '空闲', color: 'text-accent-green', bgColor: 'bg-accent-green/15' },
@@ -224,7 +225,7 @@ function ReturnModal() {
 }
 
 export default function DevicesPage() {
-  const { devices } = useAppStore()
+  const { devices, setAddDeviceModalOpen } = useAppStore()
 
   const idleCount = devices.filter((d) => d.status === 'idle').length
   const borrowedCount = devices.filter((d) => d.status === 'borrowed').length
@@ -240,6 +241,13 @@ export default function DevicesPage() {
           {requestedCount > 0 && (
             <span className="text-[9px] text-accent-cyan">{requestedCount} 申请中</span>
           )}
+          <button
+            onClick={() => setAddDeviceModalOpen(true)}
+            className="w-7 h-7 rounded-lg bg-accent-green/10 flex items-center justify-center hover:bg-accent-green/20 transition-colors active:scale-95"
+            title="添加设备"
+          >
+            <Plus size={13} className="text-accent-green" />
+          </button>
         </div>
       </div>
 
@@ -251,6 +259,7 @@ export default function DevicesPage() {
 
       <RequestModal />
       <ReturnModal />
+      <AddDeviceModal />
     </div>
   )
 }

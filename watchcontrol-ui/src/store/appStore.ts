@@ -50,18 +50,21 @@ interface AppStore {
   requestModalOpen: boolean
   returnModalOpen: boolean
   wifiModalOpen: boolean
+  addDeviceModalOpen: boolean
   wifiConnecting: boolean
   selectedDeviceId: string | null
   setActiveTab: (tab: TabType) => void
   setRequestModalOpen: (open: boolean) => void
   setReturnModalOpen: (open: boolean) => void
   setWifiModalOpen: (open: boolean) => void
+  setAddDeviceModalOpen: (open: boolean) => void
   setSelectedDeviceId: (id: string | null) => void
   addLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void
   requestDevice: (deviceId: string, borrower: string) => void
   returnDevice: (deviceId: string) => void
   connectWifi: (ssid: string, password: string) => void
   disconnectWifi: () => void
+  addDevice: (name: string, mac: string) => void
 }
 
 const mockDevices: WatchDevice[] = [
@@ -204,12 +207,14 @@ export const useAppStore = create<AppStore>((set) => ({
   requestModalOpen: false,
   returnModalOpen: false,
   wifiModalOpen: false,
+  addDeviceModalOpen: false,
   wifiConnecting: false,
   selectedDeviceId: null,
   setActiveTab: (tab) => set({ activeTab: tab }),
   setRequestModalOpen: (open) => set({ requestModalOpen: open }),
   setReturnModalOpen: (open) => set({ returnModalOpen: open }),
   setWifiModalOpen: (open) => set({ wifiModalOpen: open }),
+  setAddDeviceModalOpen: (open) => set({ addDeviceModalOpen: open }),
   setSelectedDeviceId: (id) => set({ selectedDeviceId: id }),
   addLog: (entry) =>
     set((state) => ({
@@ -308,4 +313,32 @@ export const useAppStore = create<AppStore>((set) => ({
         },
       ],
     })),
+  addDevice: (name, mac) => {
+    const deviceId = `watch_${mac.replace(/:/g, '')}`
+    set((state) => ({
+      devices: [
+        ...state.devices,
+        {
+          deviceId,
+          mac,
+          name,
+          connected: false,
+          status: 'idle',
+          borrowedBy: '',
+          borrowedAt: 0,
+        },
+      ],
+      addDeviceModalOpen: false,
+      logs: [
+        ...state.logs,
+        {
+          id: String(state.logs.length + 1),
+          timestamp: Date.now(),
+          type: 'device' as const,
+          level: 'info' as const,
+          message: `设备 ${name} (${mac}) 已添加`,
+        },
+      ],
+    }))
+  },
 }))
