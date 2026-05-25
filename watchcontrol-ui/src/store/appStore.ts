@@ -49,14 +49,19 @@ interface AppStore {
   activeTab: TabType
   requestModalOpen: boolean
   returnModalOpen: boolean
+  wifiModalOpen: boolean
+  wifiConnecting: boolean
   selectedDeviceId: string | null
   setActiveTab: (tab: TabType) => void
   setRequestModalOpen: (open: boolean) => void
   setReturnModalOpen: (open: boolean) => void
+  setWifiModalOpen: (open: boolean) => void
   setSelectedDeviceId: (id: string | null) => void
   addLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void
   requestDevice: (deviceId: string, borrower: string) => void
   returnDevice: (deviceId: string) => void
+  connectWifi: (ssid: string, password: string) => void
+  disconnectWifi: () => void
 }
 
 const mockDevices: WatchDevice[] = [
@@ -198,10 +203,13 @@ export const useAppStore = create<AppStore>((set) => ({
   activeTab: 'status',
   requestModalOpen: false,
   returnModalOpen: false,
+  wifiModalOpen: false,
+  wifiConnecting: false,
   selectedDeviceId: null,
   setActiveTab: (tab) => set({ activeTab: tab }),
   setRequestModalOpen: (open) => set({ requestModalOpen: open }),
   setReturnModalOpen: (open) => set({ returnModalOpen: open }),
+  setWifiModalOpen: (open) => set({ wifiModalOpen: open }),
   setSelectedDeviceId: (id) => set({ selectedDeviceId: id }),
   addLog: (entry) =>
     set((state) => ({
@@ -233,5 +241,71 @@ export const useAppStore = create<AppStore>((set) => ({
       ),
       returnModalOpen: false,
       selectedDeviceId: null,
+    })),
+  connectWifi: (ssid, password) => {
+    set({ wifiConnecting: true })
+    setTimeout(() => {
+      set((state) => ({
+        systemStatus: {
+          ...state.systemStatus,
+          wifi: {
+            connected: true,
+            ssid,
+            ip: '192.168.43.' + Math.floor(Math.random() * 254 + 1),
+            signalStrength: -Math.floor(Math.random() * 30 + 30),
+          },
+        },
+        wifiConnecting: false,
+        wifiModalOpen: false,
+      }))
+    }, 1500)
+    set((state) => ({
+      logs: [
+        ...state.logs,
+        {
+          id: String(state.logs.length + 1),
+          timestamp: Date.now(),
+          type: 'wifi' as const,
+          level: 'info' as const,
+          message: `正在连接 WiFi: ${ssid}...`,
+        },
+      ],
+    }))
+    setTimeout(() => {
+      set((state) => ({
+        logs: [
+          ...state.logs,
+          {
+            id: String(state.logs.length + 1),
+            timestamp: Date.now(),
+            type: 'wifi' as const,
+            level: 'info' as const,
+            message: `WiFi 连接成功, IP: ${ssid}`,
+          },
+        ],
+      }))
+    }, 1600)
+  },
+  disconnectWifi: () =>
+    set((state) => ({
+      systemStatus: {
+        ...state.systemStatus,
+        wifi: {
+          connected: false,
+          ssid: '',
+          ip: '',
+          signalStrength: 0,
+        },
+      },
+      logs: [
+        ...state.logs,
+        {
+          id: String(state.logs.length + 1),
+          timestamp: Date.now(),
+          type: 'wifi' as const,
+          level: 'warn' as const,
+          message: 'WiFi 已断开连接',
+        },
+      ],
     })),
 }))

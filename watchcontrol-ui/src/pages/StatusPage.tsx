@@ -1,5 +1,6 @@
-import { Wifi, Cloud, Radio, Hash } from 'lucide-react'
+import { Wifi, Cloud, Radio, Hash, Settings, Unplug } from 'lucide-react'
 import { useAppStore } from '@/store/appStore'
+import WifiModal from '@/components/WifiModal'
 
 function StatusIndicator({ online, label }: { online: boolean; label: string }) {
   return (
@@ -19,6 +20,7 @@ function StatusCard({
   onlineLabel,
   offlineLabel,
   details,
+  action,
 }: {
   icon: React.ReactNode
   title: string
@@ -26,6 +28,7 @@ function StatusCard({
   onlineLabel: string
   offlineLabel: string
   details: { label: string; value: string }[]
+  action?: React.ReactNode
 }) {
   return (
     <div className={`card ${online ? 'animate-glow' : ''}`}>
@@ -36,7 +39,10 @@ function StatusCard({
           </div>
           <span className="text-xs font-medium text-gray-300">{title}</span>
         </div>
-        <StatusIndicator online={online} label={online ? onlineLabel : offlineLabel} />
+        <div className="flex items-center gap-2">
+          {action}
+          <StatusIndicator online={online} label={online ? onlineLabel : offlineLabel} />
+        </div>
       </div>
       <div className="space-y-1">
         {details.map((d, i) => (
@@ -102,22 +108,46 @@ function DeviceCounter() {
 }
 
 export default function StatusPage() {
-  const { systemStatus } = useAppStore()
+  const { systemStatus, setWifiModalOpen, disconnectWifi } = useAppStore()
   const { wifi, mqtt, sle } = systemStatus
 
   return (
-    <div className="p-3 space-y-2.5 animate-slide-up">
+    <div className="p-3 space-y-2.5 animate-slide-up relative">
       <StatusCard
-        icon={<Wifi size={14} className="text-accent-green" />}
+        icon={<Wifi size={14} className={wifi.connected ? 'text-accent-green' : 'text-accent-red'} />}
         title="WiFi"
         online={wifi.connected}
         onlineLabel="已连接"
         offlineLabel="未连接"
-        details={[
-          { label: 'SSID', value: wifi.ssid },
-          { label: 'IP', value: wifi.ip },
-          { label: '信号', value: `${wifi.signalStrength} dBm` },
-        ]}
+        details={
+          wifi.connected
+            ? [
+                { label: 'SSID', value: wifi.ssid },
+                { label: 'IP', value: wifi.ip },
+                { label: '信号', value: `${wifi.signalStrength} dBm` },
+              ]
+            : [{ label: '状态', value: '未连接任何网络' }]
+        }
+        action={
+          <div className="flex items-center gap-1">
+            {wifi.connected && (
+              <button
+                onClick={disconnectWifi}
+                className="w-6 h-6 rounded-md bg-accent-red/10 flex items-center justify-center hover:bg-accent-red/20 transition-colors"
+                title="断开 WiFi"
+              >
+                <Unplug size={11} className="text-accent-red" />
+              </button>
+            )}
+            <button
+              onClick={() => setWifiModalOpen(true)}
+              className="w-6 h-6 rounded-md bg-base-700 flex items-center justify-center hover:bg-base-600 transition-colors"
+              title={wifi.connected ? '切换 WiFi' : '连接 WiFi'}
+            >
+              <Settings size={11} className="text-gray-400" />
+            </button>
+          </div>
+        }
       />
 
       <StatusCard
@@ -167,6 +197,8 @@ export default function StatusPage() {
           </div>
         </div>
       </div>
+
+      <WifiModal />
     </div>
   )
 }
