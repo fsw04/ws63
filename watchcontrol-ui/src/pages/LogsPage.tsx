@@ -1,4 +1,4 @@
-import { Radio, Cloud, Wifi, AlertTriangle } from 'lucide-react'
+import { Radio, Cloud, Wifi, AlertTriangle, Watch } from 'lucide-react'
 import { useAppStore, type LogEntry } from '@/store/appStore'
 
 const typeConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -6,6 +6,7 @@ const typeConfig: Record<string, { icon: React.ReactNode; color: string; label: 
   mqtt: { icon: <Cloud size={10} />, color: 'text-accent-cyan', label: 'MQTT' },
   wifi: { icon: <Wifi size={10} />, color: 'text-accent-yellow', label: 'WiFi' },
   alert: { icon: <AlertTriangle size={10} />, color: 'text-accent-red', label: '告警' },
+  device: { icon: <Watch size={10} />, color: 'text-accent-green', label: '设备' },
 }
 
 const levelColors: Record<string, string> = {

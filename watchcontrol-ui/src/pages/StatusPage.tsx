@@ -1,4 +1,4 @@
-import { Wifi, Cloud, Radio, Signal, Server, Hash } from 'lucide-react'
+import { Wifi, Cloud, Radio, Hash } from 'lucide-react'
 import { useAppStore } from '@/store/appStore'
 
 function StatusIndicator({ online, label }: { online: boolean; label: string }) {
@@ -56,6 +56,9 @@ function DeviceCounter() {
   const connected = systemStatus.sle.connectedDevices
   const percentage = total > 0 ? (connected / total) * 100 : 0
 
+  const idleCount = devices.filter((d) => d.status === 'idle').length
+  const borrowedCount = devices.filter((d) => d.status === 'borrowed').length
+
   const circumference = 2 * Math.PI * 28
   const strokeDashoffset = circumference - (percentage / 100) * circumference
 
@@ -89,14 +92,9 @@ function DeviceCounter() {
         <div className="text-[10px] text-gray-500 mb-2">
           {connected} 在线 / {total} 总计
         </div>
-        <div className="flex gap-1">
-          {devices.map((d, i) => (
-            <div
-              key={i}
-              className={`w-2 h-2 rounded-full ${d.connected ? 'bg-accent-green' : 'bg-accent-red'}`}
-              title={d.name}
-            />
-          ))}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-accent-green">{idleCount} 空闲</span>
+          <span className="text-[9px] text-accent-yellow">{borrowedCount} 借出</span>
         </div>
       </div>
     </div>

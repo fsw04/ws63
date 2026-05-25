@@ -1,20 +1,15 @@
 import { create } from 'zustand'
 
+export type DeviceStatus = 'idle' | 'borrowed' | 'requested' | 'returning'
+
 export interface WatchDevice {
   deviceId: string
   mac: string
   name: string
-  phone: string
-  idCard: string
   connected: boolean
-  lastUpdate: number
-  vitals: {
-    height: string
-    weight: string
-    bmi: string
-    bloodPressure: string
-    fastingBloodGlucose: string
-  }
+  status: DeviceStatus
+  borrowedBy: string
+  borrowedAt: number
 }
 
 export interface SystemStatus {
@@ -40,7 +35,7 @@ export interface SystemStatus {
 export interface LogEntry {
   id: string
   timestamp: number
-  type: 'sle' | 'mqtt' | 'wifi' | 'alert'
+  type: 'sle' | 'mqtt' | 'wifi' | 'alert' | 'device'
   level: 'info' | 'warn' | 'error'
   message: string
 }
@@ -52,61 +47,54 @@ interface AppStore {
   devices: WatchDevice[]
   logs: LogEntry[]
   activeTab: TabType
-  currentDeviceIndex: number
+  requestModalOpen: boolean
+  returnModalOpen: boolean
+  selectedDeviceId: string | null
   setActiveTab: (tab: TabType) => void
-  setCurrentDeviceIndex: (index: number) => void
+  setRequestModalOpen: (open: boolean) => void
+  setReturnModalOpen: (open: boolean) => void
+  setSelectedDeviceId: (id: string | null) => void
   addLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void
-  updateDeviceVitals: (deviceId: string, vitals: WatchDevice['vitals']) => void
+  requestDevice: (deviceId: string, borrower: string) => void
+  returnDevice: (deviceId: string) => void
 }
 
 const mockDevices: WatchDevice[] = [
   {
     deviceId: 'watch_5200075C6713',
     mac: '52:00:07:5C:67:13',
-    name: '李桂芳',
-    phone: '13900000002',
-    idCard: '110101196104082422',
+    name: '手表-01',
     connected: true,
-    lastUpdate: Date.now() - 30000,
-    vitals: {
-      height: '160 cm',
-      weight: '55 kg',
-      bmi: '21.5',
-      bloodPressure: '120/80 mmHg',
-      fastingBloodGlucose: '5.2 mmol/L',
-    },
+    status: 'idle',
+    borrowedBy: '',
+    borrowedAt: 0,
   },
   {
     deviceId: 'watch_A1B2C3D4E5F6',
     mac: 'A1:B2:C3:D4:E5:F6',
-    name: '张明远',
-    phone: '13900000003',
-    idCard: '110101198503152315',
+    name: '手表-02',
     connected: true,
-    lastUpdate: Date.now() - 45000,
-    vitals: {
-      height: '172 cm',
-      weight: '68 kg',
-      bmi: '23.0',
-      bloodPressure: '130/85 mmHg',
-      fastingBloodGlucose: '5.8 mmol/L',
-    },
+    status: 'borrowed',
+    borrowedBy: '李桂芳',
+    borrowedAt: Date.now() - 86400000,
   },
   {
     deviceId: 'watch_7A8B9C0D1E2F',
     mac: '7A:8B:9C:0D:1E:2F',
-    name: '王秀英',
-    phone: '13900000004',
-    idCard: '110101193805201628',
+    name: '手表-03',
     connected: false,
-    lastUpdate: Date.now() - 300000,
-    vitals: {
-      height: '155 cm',
-      weight: '48 kg',
-      bmi: '20.0',
-      bloodPressure: '145/92 mmHg',
-      fastingBloodGlucose: '6.8 mmol/L',
-    },
+    status: 'idle',
+    borrowedBy: '',
+    borrowedAt: 0,
+  },
+  {
+    deviceId: 'watch_D4E5F6A7B8C9',
+    mac: 'D4:E5:F6:A7:B8:C9',
+    name: '手表-04',
+    connected: true,
+    status: 'requested',
+    borrowedBy: '张明远',
+    borrowedAt: 0,
   },
 ]
 
@@ -125,7 +113,7 @@ const mockStatus: SystemStatus = {
   },
   sle: {
     broadcasting: true,
-    connectedDevices: 2,
+    connectedDevices: 3,
     serverName: 'sle_speed_server',
   },
 }
@@ -169,9 +157,9 @@ const mockLogs: LogEntry[] = [
   {
     id: '6',
     timestamp: Date.now() - 35000,
-    type: 'mqtt',
+    type: 'device',
     level: 'info',
-    message: '发布数据到 watch/sensors/report',
+    message: '李桂芳 申请了 手表-02',
   },
   {
     id: '7',
@@ -183,9 +171,9 @@ const mockLogs: LogEntry[] = [
   {
     id: '8',
     timestamp: Date.now() - 25000,
-    type: 'mqtt',
+    type: 'device',
     level: 'info',
-    message: '发布数据到 watch/sensors/report',
+    message: '张明远 申请了 手表-04，待审批',
   },
   {
     id: '9',
@@ -208,9 +196,13 @@ export const useAppStore = create<AppStore>((set) => ({
   devices: mockDevices,
   logs: mockLogs,
   activeTab: 'status',
-  currentDeviceIndex: 0,
+  requestModalOpen: false,
+  returnModalOpen: false,
+  selectedDeviceId: null,
   setActiveTab: (tab) => set({ activeTab: tab }),
-  setCurrentDeviceIndex: (index) => set({ currentDeviceIndex: index }),
+  setRequestModalOpen: (open) => set({ requestModalOpen: open }),
+  setReturnModalOpen: (open) => set({ returnModalOpen: open }),
+  setSelectedDeviceId: (id) => set({ selectedDeviceId: id }),
   addLog: (entry) =>
     set((state) => ({
       logs: [
@@ -222,12 +214,24 @@ export const useAppStore = create<AppStore>((set) => ({
         },
       ],
     })),
-  updateDeviceVitals: (deviceId, vitals) =>
+  requestDevice: (deviceId, borrower) =>
     set((state) => ({
       devices: state.devices.map((d) =>
         d.deviceId === deviceId
-          ? { ...d, vitals, lastUpdate: Date.now() }
+          ? { ...d, status: 'borrowed' as DeviceStatus, borrowedBy: borrower, borrowedAt: Date.now() }
           : d
       ),
+      requestModalOpen: false,
+      selectedDeviceId: null,
+    })),
+  returnDevice: (deviceId) =>
+    set((state) => ({
+      devices: state.devices.map((d) =>
+        d.deviceId === deviceId
+          ? { ...d, status: 'idle' as DeviceStatus, borrowedBy: '', borrowedAt: 0 }
+          : d
+      ),
+      returnModalOpen: false,
+      selectedDeviceId: null,
     })),
 }))
