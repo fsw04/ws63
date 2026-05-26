@@ -81,13 +81,13 @@ config TOUCH_SDA_PIN
     int
     prompt "Touch I2C SDA PIN."
     depends on SAMPLE_SUPPORT_TOUCH
-    default 17
+    default 15
 
 config TOUCH_SCL_PIN
     int
     prompt "Touch I2C SCL PIN."
     depends on SAMPLE_SUPPORT_TOUCH
-    default 18
+    default 16
 
 config TOUCH_RST_PIN
     int

@@ -5,7 +5,7 @@
 #include "i2c.h"
 #include "soc_osal.h"
 
-#define FT6336_I2C_BUS          I2C_BUS_0
+#define FT6336_I2C_BUS          I2C_BUS_1
 #define FT6336_I2C_BAUDRATE     400000
 #define FT6336_READ_LEN         16
 
