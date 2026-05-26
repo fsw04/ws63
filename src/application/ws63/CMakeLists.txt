@@ -13,6 +13,7 @@ add_subdirectory_if_exist(ws63_liteos_mfg)
 add_subdirectory_if_exist(ws63_liteos_testsuite_radar)
 add_subdirectory_if_exist(watchcontrol)
 add_subdirectory_if_exist(watchdevice)
+add_subdirectory_if_exist(lcd_touch)
 
 #if(DEFINED CONFIG_ENABLE_WATCHCONTROL)
 #    add_subdirectory_if_exist(watchcontrol)

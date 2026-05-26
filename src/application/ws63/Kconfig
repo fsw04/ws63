@@ -22,3 +22,13 @@ config ENABLE_WATCHDEVICE
 if ENABLE_WATCHDEVICE
 osource "application/ws63/watchdevice/Kconfig"
 endif
+
+config ENABLE_LCD_TOUCH
+    bool
+    prompt "Enable LCD Touch (ST7796+FT6336)."
+    default n
+    depends on WS63_ENABLE
+
+if ENABLE_LCD_TOUCH
+osource "application/ws63/lcd_touch/Kconfig"
+endif
