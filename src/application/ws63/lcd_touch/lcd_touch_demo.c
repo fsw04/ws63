@@ -66,6 +66,7 @@ static void disp_flush(lv_display_t *disp_drv, const lv_area_t *area, uint8_t *p
 
 static void touch_read_callback(lv_indev_t *indev, lv_indev_data_t *data)
 {
+    unused(indev);
     static ft6336_touch_data_t touch_data = {0};
 
     if (ft6336_read_touch(&touch_data) && touch_data.touch_count > 0) {
@@ -83,7 +84,7 @@ static void create_demo_ui(void)
     lv_obj_t *label = lv_label_create(lv_screen_active());
     lv_label_set_text(label, "ST7796 + FT6336\nTouch Screen Demo");
     lv_obj_set_style_text_color(label, lv_color_hex(0x0000FF), 0);
-    lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_14, 0);
     lv_obj_center(label);
 
     lv_obj_t *btn = lv_button_create(lv_screen_active());
