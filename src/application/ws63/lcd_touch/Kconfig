@@ -2,22 +2,15 @@
 # @brief    Kconfig file for ST7796 + FT6336 LCD Touch
 #===============================================================================
 
-config SAMPLE_SUPPORT_LCD_TOUCH
-    bool
-    prompt "Support ST7796 + FT6336 LCD Touch."
-    default y
-    help
-        ST7796 3.5inch SPI LCD + FT6336 capacitive touch.
-
 config SAMPLE_SUPPORT_LCD
     bool
     default y
-    depends on SAMPLE_SUPPORT_LCD_TOUCH
+    depends on ENABLE_LCD_TOUCH
 
 config SAMPLE_SUPPORT_TOUCH
     bool
     default y
-    depends on SAMPLE_SUPPORT_LCD_TOUCH
+    depends on ENABLE_LCD_TOUCH
 
 config SPI_DI_PIN
     int
