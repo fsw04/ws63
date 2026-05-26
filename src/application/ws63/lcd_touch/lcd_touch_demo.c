@@ -60,6 +60,7 @@ static int *timer_task(const char *arg)
 
 static void disp_flush(lv_display_t *disp_drv, const lv_area_t *area, uint8_t *px_map)
 {
+    lcd_set_windows(area->x1, area->y1, area->x2, area->y2);
     lcd_diplay(px_map, (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1) * 2);
     lv_display_flush_ready(disp_drv);
 }
