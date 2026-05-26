@@ -89,6 +89,7 @@ target = {
             "sle_netdev", "chba_at",
             "tiot_driver",
             "lvgl",
+            "lcd_touch",
             "watchcontrol",
             "watchdevice",
             "mqtt"
