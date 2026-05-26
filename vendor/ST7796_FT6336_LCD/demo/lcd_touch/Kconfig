@@ -1,0 +1,102 @@
+#===============================================================================
+# @brief    Kconfig file for ST7796 + FT6336 LCD Touch demo.
+#===============================================================================
+
+config SAMPLE_SUPPORT_LCD_TOUCH
+    bool
+    prompt "Support ST7796 + FT6336 LCD Touch."
+    default y
+    help
+        This option means support ST7796 3.5inch SPI LCD + FT6336 capacitive touch.
+
+config SAMPLE_SUPPORT_LCD
+    bool
+    default y
+    depends on SAMPLE_SUPPORT_LCD_TOUCH
+
+config SAMPLE_SUPPORT_TOUCH
+    bool
+    default y
+    depends on SAMPLE_SUPPORT_LCD_TOUCH
+
+# ==================== SPI LCD Pin Configuration ====================
+
+config SPI_DI_PIN
+    int
+    prompt "SPI DI (MISO) PIN."
+    depends on SAMPLE_SUPPORT_LCD
+    default 11
+
+config SPI_DO_PIN
+    int
+    prompt "SPI DO (MOSI) PIN."
+    depends on SAMPLE_SUPPORT_LCD
+    default 9
+
+config SPI_CLK_PIN
+    int
+    prompt "SPI CLK PIN."
+    depends on SAMPLE_SUPPORT_LCD
+    default 7
+
+config SPI_CS_PIN
+    int
+    prompt "SPI CS PIN."
+    depends on SAMPLE_SUPPORT_LCD
+    default 8
+
+config SPI_MASTER_PIN_MODE
+    int
+    prompt "SPI MASTER PIN MODE."
+    depends on SAMPLE_SUPPORT_LCD
+    default 3
+
+config SPI_RS_PIN
+    int
+    prompt "SPI DC/RS PIN."
+    depends on SAMPLE_SUPPORT_LCD
+    default 1
+
+config SPI_RST_PIN
+    int
+    prompt "SPI RST PIN."
+    depends on SAMPLE_SUPPORT_LCD
+    default 14
+
+config SPI_BLK_PIN
+    int
+    prompt "SPI Backlight PIN."
+    depends on SAMPLE_SUPPORT_LCD
+    default 12
+
+config GPIO_PIN_MODE
+    int
+    prompt "GPIO PIN MODE."
+    depends on SAMPLE_SUPPORT_LCD
+    default 0
+
+# ==================== FT6336 Touch Pin Configuration ====================
+
+config TOUCH_SDA_PIN
+    int
+    prompt "Touch I2C SDA PIN."
+    depends on SAMPLE_SUPPORT_TOUCH
+    default 17
+
+config TOUCH_SCL_PIN
+    int
+    prompt "Touch I2C SCL PIN."
+    depends on SAMPLE_SUPPORT_TOUCH
+    default 18
+
+config TOUCH_RST_PIN
+    int
+    prompt "Touch RST PIN."
+    depends on SAMPLE_SUPPORT_TOUCH
+    default 13
+
+config TOUCH_INT_PIN
+    int
+    prompt "Touch INT PIN."
+    depends on SAMPLE_SUPPORT_TOUCH
+    default 2
