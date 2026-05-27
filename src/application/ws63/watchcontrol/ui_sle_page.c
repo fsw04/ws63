@@ -213,7 +213,7 @@ lv_obj_t *ui_sle_page_create(lv_obj_t *parent)
     lv_obj_set_width(device_list, LV_PCT(100));
     lv_obj_set_scroll_dir(device_list, LV_DIR_VER);
     lv_obj_add_flag(device_list, LV_OBJ_FLAG_SCROLL_CHAIN);
-    lv_obj_set_max_height(device_list, 240);
+    lv_obj_set_style_max_height(device_list, 240, 0);
 
     lv_obj_t *legend = lv_obj_create(panel);
     lv_obj_set_size(legend, LV_PCT(100), LV_SIZE_CONTENT);

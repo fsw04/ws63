@@ -213,10 +213,17 @@ static void show_return_dialog(int idx)
                         (void *)(intptr_t)idx);
 }
 
+static ui_event_cb_t add_device_cb = NULL;
+
+void ui_devices_set_add_cb(ui_event_cb_t cb)
+{
+    add_device_cb = cb;
+}
+
 static void add_btn_cb(lv_event_t *e)
 {
     LV_UNUSED(e);
-    extern void ui_set_sle_page_cb(ui_event_cb_t cb);
+    if (add_device_cb) add_device_cb(NULL);
 }
 
 static void create_device_item(int idx)

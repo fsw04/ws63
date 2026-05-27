@@ -6,5 +6,7 @@
 
 lv_obj_t *ui_status_page_create(lv_obj_t *parent);
 void ui_status_page_update(const ui_system_status_t *status, const ui_device_t *devices, int device_count);
+void ui_set_wifi_page_cb(ui_event_cb_t cb);
+void ui_set_sle_page_cb(ui_event_cb_t cb);
 
 #endif

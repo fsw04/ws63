@@ -56,6 +56,8 @@ typedef enum {
 #define MAX_DEVICES 8
 #define MAX_DISCOVERED 8
 
+typedef void (*ui_event_cb_t)(void *user_data);
+
 typedef struct {
     char mac[18];
     char name[16];
