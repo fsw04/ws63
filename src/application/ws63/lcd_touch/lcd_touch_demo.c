@@ -58,8 +58,17 @@ static int *timer_task(const char *arg)
     return 0;
 }
 
+static uint32_t g_flush_count = 0;
+
 static void disp_flush(lv_display_t *disp_drv, const lv_area_t *area, uint8_t *px_map)
 {
+    if (g_flush_count < 5) {
+        osal_printk("disp_flush: (%d,%d)-(%d,%d) pixel_bytes=%d\r\n",
+            area->x1, area->y1, area->x2, area->y2,
+            (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1) * 2);
+    }
+    g_flush_count++;
+
     lcd_set_windows(area->x1, area->y1, area->x2, area->y2);
     lcd_diplay(px_map, (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1) * 2);
     lv_display_flush_ready(disp_drv);
@@ -117,11 +126,28 @@ static int lcd_touch_task(const char *arg)
 
     create_demo_ui();
 
+    osal_printk("Direct LCD test: filling red rectangle at (0,0)-(159,99)...\r\n");
+    lcd_set_windows(0, 0, 159, 99);
+    uint16_t x, y;
+    for (y = 0; y < 100; y++) {
+        for (x = 0; x < 160; x++) {
+            lcd_wr_data(0xF8);
+            lcd_wr_data(0x00);
+        }
+    }
+    osal_printk("Direct LCD test done.\r\n");
+
     osal_printk("ST7796 + FT6336 LCD Touch demo started!\r\n");
+
+    uint32_t loop_count = 0;
 
     while (1) {
         lv_timer_handler();
         osal_msleep(1);
+        loop_count++;
+        if (loop_count % 3000 == 0) {
+            osal_printk("LVGL running, flush_count=%d\r\n", g_flush_count);
+        }
     }
 
     return 0;

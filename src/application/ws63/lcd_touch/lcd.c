@@ -60,17 +60,21 @@ void lcd_diplay(uint8_t *data, uint32_t pixel_len)
     uapi_gpio_set_val(CONFIG_SPI_CS_PIN, GPIO_LEVEL_LOW);
     uapi_gpio_set_val(CONFIG_SPI_RS_PIN, GPIO_LEVEL_HIGH);
 
-    uint8_t buf_count = (pixel_len % DMA_SIZE == 0) ? pixel_len / DMA_SIZE : pixel_len / DMA_SIZE + 1;
+    uint32_t remaining = pixel_len;
+    uint32_t offset = 0;
     spi_xfer_data_t xfer = {0};
     errcode_t ret;
 
-    for (uint8_t i = 0; i < buf_count; i++) {
-        xfer.tx_buff = data + i * DMA_SIZE;
-        xfer.tx_bytes = (i != buf_count - 1)? DMA_SIZE: pixel_len % DMA_SIZE;
+    while (remaining > 0) {
+        uint32_t chunk = (remaining > DMA_SIZE) ? DMA_SIZE : remaining;
+        xfer.tx_buff = data + offset;
+        xfer.tx_bytes = chunk;
         ret = uapi_spi_master_write(SPI_BUS_0, &xfer, 0xFFFFFFFF);
         if (ret != ERRCODE_SUCC) {
             printf("%d SPI send failed: 0x%x\n", __LINE__, ret);
         }
+        offset += chunk;
+        remaining -= chunk;
     }
 
     uapi_gpio_set_val(CONFIG_SPI_CS_PIN, GPIO_LEVEL_HIGH);
