@@ -8,7 +8,7 @@
 
 #define SPI_SLAVE_NUM       1
 #define SPI_BUS_CLK         96000000
-#define SPI_FREQ_MHZ        48
+#define SPI_FREQ_MHZ        10
 #define SPI_CLK_POLARITY    0
 #define SPI_CLK_PHASE       0
 #define SPI_FRAME_FORMAT    0
@@ -288,8 +288,6 @@ void lcd_init(void)
     lcd_wr_command(0x29);
 
     lcd_direction(USE_HORIZONTAL);
-    lcd_clear(RED);
-    osal_printk("lcd_clear(RED) done in lcd_init\r\n");
 }
 
 void lcd_set_windows(uint16_t x_star, uint16_t y_star, uint16_t x_end, uint16_t y_end)

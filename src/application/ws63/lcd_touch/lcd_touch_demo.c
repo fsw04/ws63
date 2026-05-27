@@ -14,7 +14,7 @@
 #define FRAME_RATE                  30
 #define FRAME_TIME_MS               (uint32_t)(1000 / FRAME_RATE)
 
-#define TASK_STACK_SIZE             0x1200
+#define TASK_STACK_SIZE             0x2000
 #define TASK_PRIO                   24
 #define TIMER_TASK_PRIO             25
 
@@ -98,6 +98,23 @@ static void create_demo_ui(void)
     lv_obj_center(label);
 }
 
+static void test_fill_color(uint16_t color, const char *name)
+{
+    static uint8_t line_buf[LCD_W * 2];
+
+    for (uint16_t i = 0; i < LCD_W; i++) {
+        line_buf[i * 2] = color >> 8;
+        line_buf[i * 2 + 1] = color & 0xFF;
+    }
+
+    osal_printk("Test: filling screen %s using lcd_diplay...\r\n", name);
+    lcd_set_windows(0, 0, LCD_W - 1, LCD_H - 1);
+    for (uint16_t row = 0; row < LCD_H; row++) {
+        lcd_diplay(line_buf, LCD_W * 2);
+    }
+    osal_printk("Test: %s fill done\r\n", name);
+}
+
 static int lcd_touch_task(const char *arg)
 {
     unused(arg);
@@ -108,17 +125,21 @@ static int lcd_touch_task(const char *arg)
     lcd_init();
     osal_printk("LCD init done\r\n");
 
-    osal_printk("Test: lcd_clear(BLUE) after init...\r\n");
-    lcd_clear(BLUE);
-    osal_printk("lcd_clear(BLUE) done\r\n");
+    osal_printk("=== DIAGNOSTIC TEST 1: fill RED via lcd_diplay ===\r\n");
+    test_fill_color(0xF800, "RED");
+    osal_msleep(2000);
+
+    osal_printk("=== DIAGNOSTIC TEST 2: fill BLUE via lcd_diplay ===\r\n");
+    test_fill_color(0x001F, "BLUE");
+    osal_msleep(2000);
+
+    osal_printk("=== DIAGNOSTIC TEST 3: fill GREEN via lcd_diplay ===\r\n");
+    test_fill_color(0x07E0, "GREEN");
+    osal_msleep(2000);
 
     osal_printk("Initializing FT6336 touch...\r\n");
     ft6336_init();
     osal_printk("FT6336 init done\r\n");
-
-    osal_printk("Test: lcd_clear(GREEN) after ft6336_init...\r\n");
-    lcd_clear(GREEN);
-    osal_printk("lcd_clear(GREEN) done\r\n");
 
     osal_printk("Initializing LVGL...\r\n");
     lv_init();
@@ -133,18 +154,6 @@ static int lcd_touch_task(const char *arg)
     lv_indev_set_read_cb(lv_touch_indev, touch_read_callback);
 
     create_demo_ui();
-
-    osal_printk("Direct LCD test: filling red rectangle at (0,0)-(159,99)...\r\n");
-    lcd_set_windows(0, 0, 159, 99);
-    lcd_wr_command(0x2C);
-    uint16_t x, y;
-    for (y = 0; y < 100; y++) {
-        for (x = 0; x < 160; x++) {
-            lcd_wr_data(0xF8);
-            lcd_wr_data(0x00);
-        }
-    }
-    osal_printk("Direct LCD test done.\r\n");
 
     osal_printk("ST7796 + FT6336 LCD Touch demo started!\r\n");
 
