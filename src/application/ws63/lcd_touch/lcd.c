@@ -8,7 +8,7 @@
 
 #define SPI_SLAVE_NUM       1
 #define SPI_BUS_CLK         96000000
-#define SPI_FREQ_MHZ        20
+#define SPI_FREQ_MHZ        10
 #define SPI_CLK_POLARITY    0
 #define SPI_CLK_PHASE       0
 #define SPI_FRAME_FORMAT    0
