@@ -57,6 +57,8 @@ void lcd_diplay(uint8_t *data, uint32_t pixel_len)
         printf("Input invalid.\r\n");
         return;
     }
+    lcd_wr_command(g_lcd_dev.wramcmd);
+
     uapi_gpio_set_val(CONFIG_SPI_CS_PIN, GPIO_LEVEL_LOW);
     uapi_gpio_set_val(CONFIG_SPI_RS_PIN, GPIO_LEVEL_HIGH);
 

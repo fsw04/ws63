@@ -128,6 +128,7 @@ static int lcd_touch_task(const char *arg)
 
     osal_printk("Direct LCD test: filling red rectangle at (0,0)-(159,99)...\r\n");
     lcd_set_windows(0, 0, 159, 99);
+    lcd_wr_command(0x2C);
     uint16_t x, y;
     for (y = 0; y < 100; y++) {
         for (x = 0; x < 160; x++) {
