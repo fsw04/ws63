@@ -108,9 +108,17 @@ static int lcd_touch_task(const char *arg)
     lcd_init();
     osal_printk("LCD init done\r\n");
 
+    osal_printk("Test: lcd_clear(BLUE) after init...\r\n");
+    lcd_clear(BLUE);
+    osal_printk("lcd_clear(BLUE) done\r\n");
+
     osal_printk("Initializing FT6336 touch...\r\n");
     ft6336_init();
     osal_printk("FT6336 init done\r\n");
+
+    osal_printk("Test: lcd_clear(GREEN) after ft6336_init...\r\n");
+    lcd_clear(GREEN);
+    osal_printk("lcd_clear(GREEN) done\r\n");
 
     osal_printk("Initializing LVGL...\r\n");
     lv_init();

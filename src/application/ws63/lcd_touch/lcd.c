@@ -285,11 +285,11 @@ void lcd_init(void)
     lcd_wr_data(0x69);
 
     osal_mdelay(120);
-    lcd_wr_command(0x21);
     lcd_wr_command(0x29);
 
     lcd_direction(USE_HORIZONTAL);
-    lcd_clear(WHITE);
+    lcd_clear(RED);
+    osal_printk("lcd_clear(RED) done in lcd_init\r\n");
 }
 
 void lcd_set_windows(uint16_t x_star, uint16_t y_star, uint16_t x_end, uint16_t y_end)
