@@ -11,9 +11,6 @@
 #include "lcd.h"
 #include "ft6336.h"
 
-#define FRAME_RATE                  30
-#define FRAME_TIME_MS               (uint32_t)(1000 / FRAME_RATE)
-
 #define TASK_STACK_SIZE             0x2000
 #define TASK_PRIO                   24
 #define TIMER_TASK_PRIO             25
@@ -21,8 +18,6 @@
 #define TIMER_INDEX                 1
 #define TIMER_PRIO                  1
 #define TIMER_DELAY_INT             5
-#define TIMER1_DELAY_FPS            (FRAME_TIME_MS * 1000)
-#define TIMER_MS_2_US               1000
 
 typedef struct timer_info {
     uint32_t start_time;
@@ -58,17 +53,8 @@ static int *timer_task(const char *arg)
     return 0;
 }
 
-static uint32_t g_flush_count = 0;
-
 static void disp_flush(lv_display_t *disp_drv, const lv_area_t *area, uint8_t *px_map)
 {
-    if (g_flush_count < 5) {
-        osal_printk("disp_flush: (%d,%d)-(%d,%d) pixel_bytes=%d\r\n",
-            area->x1, area->y1, area->x2, area->y2,
-            (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1) * 2);
-    }
-    g_flush_count++;
-
     lcd_set_windows(area->x1, area->y1, area->x2, area->y2);
     lcd_diplay(px_map, (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1) * 2);
     lv_display_flush_ready(disp_drv);
@@ -98,23 +84,6 @@ static void create_demo_ui(void)
     lv_obj_center(label);
 }
 
-static void test_fill_color(uint16_t color, const char *name)
-{
-    static uint8_t line_buf[LCD_W * 2];
-
-    for (uint16_t i = 0; i < LCD_W; i++) {
-        line_buf[i * 2] = color >> 8;
-        line_buf[i * 2 + 1] = color & 0xFF;
-    }
-
-    osal_printk("Test: filling screen %s using lcd_diplay...\r\n", name);
-    lcd_set_windows(0, 0, LCD_W - 1, LCD_H - 1);
-    for (uint16_t row = 0; row < LCD_H; row++) {
-        lcd_diplay(line_buf, LCD_W * 2);
-    }
-    osal_printk("Test: %s fill done\r\n", name);
-}
-
 static int lcd_touch_task(const char *arg)
 {
     unused(arg);
@@ -124,18 +93,6 @@ static int lcd_touch_task(const char *arg)
     osal_printk("Initializing LCD...\r\n");
     lcd_init();
     osal_printk("LCD init done\r\n");
-
-    osal_printk("=== DIAGNOSTIC TEST 1: fill RED via lcd_diplay ===\r\n");
-    test_fill_color(0xF800, "RED");
-    osal_msleep(2000);
-
-    osal_printk("=== DIAGNOSTIC TEST 2: fill BLUE via lcd_diplay ===\r\n");
-    test_fill_color(0x001F, "BLUE");
-    osal_msleep(2000);
-
-    osal_printk("=== DIAGNOSTIC TEST 3: fill GREEN via lcd_diplay ===\r\n");
-    test_fill_color(0x07E0, "GREEN");
-    osal_msleep(2000);
 
     osal_printk("Initializing FT6336 touch...\r\n");
     ft6336_init();
@@ -157,15 +114,9 @@ static int lcd_touch_task(const char *arg)
 
     osal_printk("ST7796 + FT6336 LCD Touch demo started!\r\n");
 
-    uint32_t loop_count = 0;
-
     while (1) {
         lv_timer_handler();
         osal_msleep(1);
-        loop_count++;
-        if (loop_count % 3000 == 0) {
-            osal_printk("LVGL running, flush_count=%d\r\n", g_flush_count);
-        }
     }
 
     return 0;

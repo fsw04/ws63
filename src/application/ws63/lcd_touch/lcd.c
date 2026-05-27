@@ -8,7 +8,7 @@
 
 #define SPI_SLAVE_NUM       1
 #define SPI_BUS_CLK         96000000
-#define SPI_FREQ_MHZ        10
+#define SPI_FREQ_MHZ        20
 #define SPI_CLK_POLARITY    0
 #define SPI_CLK_PHASE       0
 #define SPI_FRAME_FORMAT    0
@@ -57,9 +57,17 @@ void lcd_diplay(uint8_t *data, uint32_t pixel_len)
         printf("Input invalid.\r\n");
         return;
     }
-    lcd_wr_command(g_lcd_dev.wramcmd);
 
     uapi_gpio_set_val(CONFIG_SPI_CS_PIN, GPIO_LEVEL_LOW);
+    uapi_gpio_set_val(CONFIG_SPI_RS_PIN, GPIO_LEVEL_LOW);
+
+    uint8_t cmd = g_lcd_dev.wramcmd;
+    spi_xfer_data_t cmd_xfer = {
+        .tx_buff = &cmd,
+        .tx_bytes = 1,
+    };
+    uapi_spi_master_write(SPI_BUS_0, &cmd_xfer, 0xFFFFFFFF);
+
     uapi_gpio_set_val(CONFIG_SPI_RS_PIN, GPIO_LEVEL_HIGH);
 
     uint32_t remaining = pixel_len;
@@ -288,6 +296,7 @@ void lcd_init(void)
     lcd_wr_command(0x29);
 
     lcd_direction(USE_HORIZONTAL);
+    lcd_clear(BLACK);
 }
 
 void lcd_set_windows(uint16_t x_star, uint16_t y_star, uint16_t x_end, uint16_t y_end)
