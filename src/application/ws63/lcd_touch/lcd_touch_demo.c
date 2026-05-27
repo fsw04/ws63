@@ -83,25 +83,10 @@ static void touch_read_callback(lv_indev_t *indev, lv_indev_data_t *data)
 static void create_demo_ui(void)
 {
     lv_obj_t *label = lv_label_create(lv_screen_active());
-    lv_label_set_text(label, "ST7796 + FT6336\nTouch Screen Demo");
+    lv_label_set_text(label, "Hello World");
     lv_obj_set_style_text_color(label, lv_color_hex(0x0000FF), 0);
     lv_obj_set_style_text_font(label, &lv_font_montserrat_14, 0);
     lv_obj_center(label);
-
-    lv_obj_t *btn = lv_button_create(lv_screen_active());
-    lv_obj_set_size(btn, 120, 50);
-    lv_obj_align(btn, LV_ALIGN_CENTER, 0, 60);
-    lv_obj_t *btn_label = lv_label_create(btn);
-    lv_label_set_text(btn_label, "Button");
-    lv_obj_center(btn_label);
-
-    lv_obj_t *slider = lv_slider_create(lv_screen_active());
-    lv_obj_set_width(slider, 200);
-    lv_obj_align(slider, LV_ALIGN_CENTER, 0, 120);
-
-    lv_obj_t *arc = lv_arc_create(lv_screen_active());
-    lv_obj_set_size(arc, 100, 100);
-    lv_obj_align(arc, LV_ALIGN_TOP_RIGHT, -20, 20);
 }
 
 static int lcd_touch_task(const char *arg)
