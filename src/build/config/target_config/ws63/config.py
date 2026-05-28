@@ -91,6 +91,10 @@ target = {
             "lvgl",
             "watchcontrol",
             "watchdevice",
+            "max30102",
+            "heart",
+            "sle_MAX30102",
+            "lcd_touch",
             "mqtt"
         ],
         'ccflags': [

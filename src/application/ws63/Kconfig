@@ -22,3 +22,43 @@ config ENABLE_WATCHDEVICE
 if ENABLE_WATCHDEVICE
 osource "application/ws63/watchdevice/Kconfig"
 endif
+
+config ENABLE_MAX30102
+    bool
+    prompt "Enable max30102."
+    default n
+    depends on WS63_ENABLE
+
+if ENABLE_MAX30102
+osource "application/ws63/max30102/Kconfig"
+endif
+
+config ENABLE_HEART
+    bool
+    prompt "Enable heart."
+    default n
+    depends on WS63_ENABLE
+
+if ENABLE_HEART
+osource "application/ws63/heart/Kconfig"
+endif
+
+config SAMPLE_SUPPORT_SLE_LED
+    bool
+    prompt "Enable SLE_LED."
+    default n
+    depends on WS63_ENABLE
+
+if SAMPLE_SUPPORT_SLE_LED
+osource "application/ws63/sle_MAX30102/Kconfig"
+endif
+
+config ENABLE_LCD_TOUCH
+    bool
+    prompt "Enable LCD_TOUCH."
+    default n
+    depends on WS63_ENABLE
+
+if ENABLE_LCD_TOUCH
+osource "application/ws63/lcd_touch/Kconfig"
+endif
