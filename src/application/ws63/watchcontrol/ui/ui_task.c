@@ -2,6 +2,7 @@
 #include "soc_osal.h"
 #include "common_def.h"
 #include "display_port.h"
+#include "touch_port.h"
 #include "ui_style.h"
 #include "ui_status_page.h"
 #include "ui_devices_page.h"
@@ -127,6 +128,7 @@ static void *ui_main_task(const char *arg)
     unused(arg);
 
     display_port_init();
+    touch_port_init();
 
     ui_style_init();
 

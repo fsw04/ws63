@@ -12,6 +12,8 @@ if(DEFINED CONFIG_ENABLE_WATCHCONTROL)
         ${CMAKE_CURRENT_SOURCE_DIR}/sle_speed_server.c
         ${CMAKE_CURRENT_SOURCE_DIR}/sle_speed_server_adv.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ui/display_port.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/ft6336u.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/touch_port.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ui/ui_task.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ui/ui_style.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ui/ui_status_page.c

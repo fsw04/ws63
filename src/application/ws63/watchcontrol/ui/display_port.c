@@ -7,39 +7,16 @@
 #include "timer.h"
 #include "chip_core_irq.h"
 
-#define SPI_FREQUENCY 32
 #define SPI_CLK_POLARITY 0
 #define SPI_CLK_PHASE 0
 #define SPI_SLAVE_NUM 1
 
-#define GPIO_PINMODE 0
-#define SPI_PINMODE 3
-
 #define HIGH_BYTE_SHIFT 8
 #define LOW_BYTE_MASK 0xFF
 
-#define ST7789_NOP 0x00
-#define ST7789_SWRESET 0x01
-#define ST7789_RDDID 0x04
-#define ST7789_RDDST 0x09
-#define ST7789_SLPIN 0x10
-#define ST7789_SLPOUT 0x11
-#define ST7789_PTLON 0x12
-#define ST7789_NORON 0x13
-#define ST7789_INVOFF 0x20
-#define ST7789_INVON 0x21
-#define ST7789_DISPOFF 0x28
-#define ST7789_DISPON 0x29
-#define ST7789_CASET 0x2A
-#define ST7789_RASET 0x2B
-#define ST7789_RAMWR 0x2C
-#define ST7789_RAMRD 0x2E
-#define ST7789_PTLAR 0x30
-#define ST7789_COLMOD 0x3A
-#define ST7789_MADCTL 0x36
-
-#define ST7789_WIDTH 320
-#define ST7789_HEIGHT 480
+#define ST7796_CASET 0x2A
+#define ST7796_RASET 0x2B
+#define ST7796_RAMWR 0x2C
 
 #define TIMER_INDEX 1
 #define TIMER_PRIORITY 1
@@ -50,15 +27,23 @@ static uint8_t disp_buf[DISP_HOR_RES * DISP_BUF_ROWS * BYTE_PER_PIXEL];
 
 static void spi_init(void)
 {
-    uapi_pin_set_mode(CONFIG_SPI_DI_MASTER_PIN, SPI_PINMODE);
-    uapi_pin_set_mode(CONFIG_SPI_DO_MASTER_PIN, SPI_PINMODE);
-    uapi_pin_set_mode(CONFIG_SPI_CLK_MASTER_PIN, SPI_PINMODE);
-    uapi_pin_set_mode(CONFIG_SPI_CS_MASTER_PIN, SPI_PINMODE);
+    uapi_pin_set_mode(LCD_MOSI_PIN, SPI_PIN_MODE);
+    uapi_pin_set_mode(LCD_SCK_PIN, SPI_PIN_MODE);
+    uapi_pin_set_mode(LCD_MISO_PIN, SPI_PIN_MODE);
 
-    uapi_pin_set_mode(CONFIG_SPI_RESET_MASTER_PIN, GPIO_PINMODE);
-    uapi_gpio_set_dir(CONFIG_SPI_RESET_MASTER_PIN, GPIO_DIRECTION_OUTPUT);
-    uapi_pin_set_mode(CONFIG_SPI_DC_MASTER_PIN, GPIO_PINMODE);
-    uapi_gpio_set_dir(CONFIG_SPI_DC_MASTER_PIN, GPIO_DIRECTION_OUTPUT);
+    uapi_pin_set_mode(LCD_CS_PIN, GPIO_PIN_MODE);
+    uapi_gpio_set_dir(LCD_CS_PIN, GPIO_DIRECTION_OUTPUT);
+    uapi_gpio_set_val(LCD_CS_PIN, GPIO_LEVEL_HIGH);
+
+    uapi_pin_set_mode(LCD_RESET_PIN, GPIO_PIN_MODE);
+    uapi_gpio_set_dir(LCD_RESET_PIN, GPIO_DIRECTION_OUTPUT);
+
+    uapi_pin_set_mode(LCD_DC_PIN, GPIO_PIN_MODE);
+    uapi_gpio_set_dir(LCD_DC_PIN, GPIO_DIRECTION_OUTPUT);
+
+    uapi_pin_set_mode(LCD_BL_PIN, GPIO_PIN_MODE);
+    uapi_gpio_set_dir(LCD_BL_PIN, GPIO_DIRECTION_OUTPUT);
+    uapi_gpio_set_val(LCD_BL_PIN, GPIO_LEVEL_HIGH);
 
     spi_attr_t config = {0};
     spi_extra_attr_t ext_config = {0};
@@ -75,7 +60,7 @@ static void spi_init(void)
     config.tmod = HAL_SPI_TRANS_MODE_TX;
     config.sste = 0;
 
-    int ret = uapi_spi_init(CONFIG_SPI_MASTER_BUS_ID, &config, &ext_config);
+    int ret = uapi_spi_init(LCD_SPI_BUS, &config, &ext_config);
     if (ret != 0) {
         osal_printk("spi init fail %0x\r\n", ret);
     }
@@ -90,8 +75,10 @@ static void send_cmd(uint8_t cmd)
         .tx_buff = &d,
         .tx_bytes = 1,
     };
-    uapi_gpio_set_val(CONFIG_SPI_DC_MASTER_PIN, GPIO_LEVEL_LOW);
-    uapi_spi_master_write(CONFIG_SPI_MASTER_BUS_ID, &spi_data, 0xFFFFFFFF);
+    uapi_gpio_set_val(LCD_CS_PIN, GPIO_LEVEL_LOW);
+    uapi_gpio_set_val(LCD_DC_PIN, GPIO_LEVEL_LOW);
+    uapi_spi_master_write(LCD_SPI_BUS, &spi_data, 0xFFFFFFFF);
+    uapi_gpio_set_val(LCD_CS_PIN, GPIO_LEVEL_HIGH);
 }
 
 static void send_data(uint8_t data)
@@ -101,8 +88,10 @@ static void send_data(uint8_t data)
         .tx_buff = &d,
         .tx_bytes = 1,
     };
-    uapi_gpio_set_val(CONFIG_SPI_DC_MASTER_PIN, GPIO_LEVEL_HIGH);
-    uapi_spi_master_write(CONFIG_SPI_MASTER_BUS_ID, &spi_data, 0xFFFFFFFF);
+    uapi_gpio_set_val(LCD_CS_PIN, GPIO_LEVEL_LOW);
+    uapi_gpio_set_val(LCD_DC_PIN, GPIO_LEVEL_HIGH);
+    uapi_spi_master_write(LCD_SPI_BUS, &spi_data, 0xFFFFFFFF);
+    uapi_gpio_set_val(LCD_CS_PIN, GPIO_LEVEL_HIGH);
 }
 
 static void send_data_array(uint8_t *data, uint32_t len)
@@ -111,45 +100,53 @@ static void send_data_array(uint8_t *data, uint32_t len)
         .tx_buff = data,
         .tx_bytes = len,
     };
-    uapi_gpio_set_val(CONFIG_SPI_DC_MASTER_PIN, GPIO_LEVEL_HIGH);
-    uapi_spi_master_write(CONFIG_SPI_MASTER_BUS_ID, &spi_data, 0xFFFFFFFF);
+    uapi_gpio_set_val(LCD_CS_PIN, GPIO_LEVEL_LOW);
+    uapi_gpio_set_val(LCD_DC_PIN, GPIO_LEVEL_HIGH);
+    uapi_spi_master_write(LCD_SPI_BUS, &spi_data, 0xFFFFFFFF);
+    uapi_gpio_set_val(LCD_CS_PIN, GPIO_LEVEL_HIGH);
 }
 
-static void st7789_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
+static void st7796_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 {
     {
         uint8_t data[] = {x0 >> HIGH_BYTE_SHIFT, x0 & LOW_BYTE_MASK, x1 >> HIGH_BYTE_SHIFT, x1 & LOW_BYTE_MASK};
-        send_cmd(ST7789_CASET);
+        send_cmd(ST7796_CASET);
         send_data_array(data, sizeof(data));
     }
 
     {
         uint8_t data[] = {y0 >> HIGH_BYTE_SHIFT, y0 & LOW_BYTE_MASK, y1 >> HIGH_BYTE_SHIFT, y1 & LOW_BYTE_MASK};
-        send_cmd(ST7789_RASET);
+        send_cmd(ST7796_RASET);
         send_data_array(data, sizeof(data));
     }
 }
 
-static void st7789_write_data(uint8_t *data, uint32_t len)
+static void st7796_write_data(uint8_t *data, uint32_t len)
 {
-    send_cmd(ST7789_RAMWR);
+    send_cmd(ST7796_RAMWR);
     send_data_array(data, len);
 }
 
-static void st7789_init(void)
+static void st7796_init(void)
 {
     spi_init();
-    osal_printk("spi init\r\n");
 
-    uapi_gpio_set_val(CONFIG_SPI_RESET_MASTER_PIN, GPIO_LEVEL_LOW);
-    osal_msleep(100);
-    uapi_gpio_set_val(CONFIG_SPI_RESET_MASTER_PIN, GPIO_LEVEL_HIGH);
-    osal_msleep(100);
+    uapi_gpio_set_val(LCD_RESET_PIN, GPIO_LEVEL_LOW);
+    osal_msleep(120);
+    uapi_gpio_set_val(LCD_RESET_PIN, GPIO_LEVEL_HIGH);
+    osal_msleep(120);
 
-    send_cmd(ST7789_SLPOUT);
+    send_cmd(0x01);
+    osal_msleep(120);
 
-    send_cmd(ST7789_COLMOD);
+    send_cmd(0x11);
+    osal_msleep(20);
+
+    send_cmd(0x3A);
     send_data(0x55);
+
+    send_cmd(0x36);
+    send_data(0x00);
 
     send_cmd(0xB2);
     send_data(0x0C);
@@ -163,6 +160,9 @@ static void st7789_init(void)
 
     send_cmd(0xBB);
     send_data(0x32);
+
+    send_cmd(0xC0);
+    send_data(0x2C);
 
     send_cmd(0xC2);
     send_data(0x01);
@@ -181,49 +181,27 @@ static void st7789_init(void)
     send_data(0xA1);
 
     send_cmd(0xE0);
-    send_data(0xD0);
-    send_data(0x08);
-    send_data(0x0E);
-    send_data(0x09);
-    send_data(0x09);
-    send_data(0x05);
-    send_data(0x31);
-    send_data(0x33);
-    send_data(0x48);
-    send_data(0x17);
-    send_data(0x14);
-    send_data(0x15);
-    send_data(0x31);
-    send_data(0x34);
+    send_data(0xD0); send_data(0x08); send_data(0x0E); send_data(0x09);
+    send_data(0x09); send_data(0x05); send_data(0x31); send_data(0x33);
+    send_data(0x48); send_data(0x17); send_data(0x14); send_data(0x15);
+    send_data(0x31); send_data(0x34);
 
     send_cmd(0xE1);
-    send_data(0xD0);
-    send_data(0x08);
-    send_data(0x0E);
-    send_data(0x09);
-    send_data(0x09);
-    send_data(0x15);
-    send_data(0x31);
-    send_data(0x33);
-    send_data(0x48);
-    send_data(0x17);
-    send_data(0x14);
-    send_data(0x15);
-    send_data(0x31);
-    send_data(0x34);
+    send_data(0xD0); send_data(0x08); send_data(0x0E); send_data(0x09);
+    send_data(0x09); send_data(0x15); send_data(0x31); send_data(0x33);
+    send_data(0x48); send_data(0x17); send_data(0x14); send_data(0x15);
+    send_data(0x31); send_data(0x34);
 
-    send_cmd(ST7789_INVON);
+    send_cmd(0x21);
 
-    send_cmd(ST7789_MADCTL);
-    send_data(0x00);
-
-    send_cmd(ST7789_DISPON);
+    send_cmd(0x29);
+    osal_msleep(20);
 }
 
 static void disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
-    st7789_set_window(area->x1, area->y1, area->x2, area->y2);
-    st7789_write_data(px_map, (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1) * BYTE_PER_PIXEL);
+    st7796_set_window(area->x1, area->y1, area->x2, area->y2);
+    st7796_write_data(px_map, (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1) * BYTE_PER_PIXEL);
     lv_display_flush_ready(disp);
 }
 
@@ -234,9 +212,15 @@ static void timer_callback(uintptr_t data)
     uapi_timer_start(timer_handle, TICK_US, timer_callback, 0);
 }
 
+void display_set_backlight(bool on)
+{
+    uapi_gpio_set_val(LCD_BL_PIN, on ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW);
+}
+
 void display_port_init(void)
 {
-    st7789_init();
+    st7796_init();
+    display_set_backlight(true);
 
     lv_init();
 
