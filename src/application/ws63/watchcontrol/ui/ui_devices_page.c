@@ -1,5 +1,6 @@
 #include "ui_devices_page.h"
 #include "ui_style.h"
+#include "ui_status_page.h"
 
 #define SWIPE_THRESHOLD 40
 
@@ -216,7 +217,7 @@ static void show_return_dialog(int idx)
 static void add_btn_cb(lv_event_t *e)
 {
     LV_UNUSED(e);
-    extern void ui_set_sle_page_cb(ui_event_cb_t cb);
+    ui_set_sle_page_cb(NULL);
 }
 
 static void create_device_item(int idx)

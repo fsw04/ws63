@@ -46,6 +46,8 @@ typedef struct {
     char sle_server_name[32];
 } ui_system_status_t;
 
+typedef void (*ui_event_cb_t)(void *user_data);
+
 typedef enum {
     PAGE_STATUS = 0,
     PAGE_DEVICES,
