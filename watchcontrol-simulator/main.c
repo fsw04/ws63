@@ -1,10 +1,30 @@
+/**
+ * @file main.c
+ *
+ */
+
+/*********************
+ *      INCLUDES
+ *********************/
+
+#ifndef _DEFAULT_SOURCE
+  #define _DEFAULT_SOURCE
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
-#include "lvgl.h"
-#include "src/drivers/sdl/lv_sdl_window.h"
-#include "src/drivers/sdl/lv_sdl_mouse.h"
-#include "src/drivers/sdl/lv_sdl_keyboard.h"
-#include "src/drivers/sdl/lv_sdl_mousewheel.h"
+#ifdef _MSC_VER
+  #include <Windows.h>
+#else
+  #include <unistd.h>
+  #include <pthread.h>
+#endif
+#include "lvgl/lvgl.h"
+#include "lvgl/examples/lv_examples.h"
+#include "lvgl/demos/lv_demos.h"
+#include <SDL.h>
+
+#include "hal/hal.h"
 
 #include "ui_common.h"
 #include "ui_style.h"
@@ -13,9 +33,25 @@
 #include "ui_wifi_page.h"
 #include "ui_sle_page.h"
 
-#define SIM_WIDTH  320
-#define SIM_HEIGHT 480
+/*********************
+ *      DEFINES
+ *********************/
 
+/**********************
+ *      TYPEDEFS
+ **********************/
+
+/**********************
+ *  STATIC PROTOTYPES
+ **********************/
+static void sim_init_data(void);
+static void open_wifi_page(void *user_data);
+static void open_sle_page(void *user_data);
+static void create_log_page(lv_obj_t *parent);
+
+/**********************
+ *  STATIC VARIABLES
+ **********************/
 static ui_device_t sim_devices[MAX_DEVICES];
 static int sim_device_count = 0;
 static ui_system_status_t sim_status;
@@ -25,6 +61,83 @@ static lv_obj_t *status_page;
 static lv_obj_t *devices_page;
 static lv_obj_t *wifi_overlay;
 static lv_obj_t *sle_overlay;
+
+/**********************
+ *      MACROS
+ **********************/
+
+/**********************
+ *   GLOBAL FUNCTIONS
+ **********************/
+
+#if LV_USE_OS != LV_OS_FREERTOS
+
+int main(int argc, char **argv)
+{
+  (void)argc;
+  (void)argv;
+
+  lv_init();
+
+  sdl_hal_init(320, 480);
+
+  ui_style_init();
+
+  sim_init_data();
+
+  lv_obj_t *scr = lv_screen_active();
+  lv_obj_set_style_bg_color(scr, COLOR_BG, 0);
+
+  tabview = lv_tabview_create(scr);
+  lv_tabview_set_tab_bar_position(tabview, LV_DIR_BOTTOM);
+  lv_tabview_set_tab_bar_size(tabview, 50);
+  lv_obj_set_style_bg_color(tabview, COLOR_BG, 0);
+  lv_obj_set_style_text_font(
+      lv_tabview_get_tab_btns(tabview), &lv_font_montserrat_14, 0);
+
+  lv_obj_t *tab_status = lv_tabview_add_tab(tabview, "状态");
+  lv_obj_t *tab_devices = lv_tabview_add_tab(tabview, "设备");
+  lv_obj_t *tab_logs = lv_tabview_add_tab(tabview, "日志");
+
+  lv_obj_set_style_bg_color(tab_status, COLOR_BG, 0);
+  lv_obj_set_style_bg_color(tab_devices, COLOR_BG, 0);
+  lv_obj_set_style_bg_color(tab_logs, COLOR_BG, 0);
+
+  status_page = ui_status_page_create(tab_status);
+  ui_status_page_update(&sim_status, sim_devices, sim_device_count);
+
+  devices_page = ui_devices_page_create(tab_devices);
+  ui_devices_page_update(sim_devices, sim_device_count);
+
+  create_log_page(tab_logs);
+
+  wifi_overlay = ui_wifi_page_create(lv_layer_top());
+  sle_overlay = ui_sle_page_create(lv_layer_top());
+
+  ui_set_wifi_page_cb(open_wifi_page);
+  ui_set_sle_page_cb(open_sle_page);
+  ui_devices_set_add_cb(open_sle_page);
+
+  while(1) {
+    uint32_t sleep_time_ms = lv_timer_handler();
+    if(sleep_time_ms == LV_NO_TIMER_READY) {
+      sleep_time_ms = LV_DEF_REFR_PERIOD;
+    }
+#ifdef _MSC_VER
+    Sleep(sleep_time_ms);
+#else
+    usleep(sleep_time_ms * 1000);
+#endif
+  }
+
+  return 0;
+}
+
+#endif
+
+/**********************
+ *   STATIC FUNCTIONS
+ **********************/
 
 static void sim_init_data(void)
 {
@@ -78,7 +191,6 @@ static void open_sle_page(void *user_data)
     LV_UNUSED(user_data);
     ui_sle_page_open();
 
-    static int scan_count = 0;
     ui_discovered_t discovered[] = {
         {"52:00:07:5C:67:13", "手表-01", -38},
         {"A1:B2:C3:D4:E5:F6", "手表-02", -55},
@@ -89,7 +201,6 @@ static void open_sle_page(void *user_data)
         ui_sle_page_add_discovered(&discovered[i]);
     }
     ui_sle_page_set_scanning(false);
-    scan_count++;
 }
 
 static void create_log_page(lv_obj_t *parent)
@@ -165,64 +276,4 @@ static void create_log_page(lv_obj_t *parent)
         lv_obj_set_style_text_font(msg, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(msg, COLOR_TEXT_SECONDARY, 0);
     }
-}
-
-int main(int argc, char **argv)
-{
-    LV_UNUSED(argc);
-    LV_UNUSED(argv);
-
-    lv_init();
-
-    lv_display_t *disp = lv_sdl_window_create(SIM_WIDTH, SIM_HEIGHT);
-    lv_sdl_window_set_title(disp, "WatchControl - SLE Gateway Simulator");
-    lv_sdl_window_set_zoom(disp, 1.5f);
-
-    lv_sdl_mouse_create();
-    lv_sdl_keyboard_create();
-    lv_sdl_mousewheel_create();
-
-    ui_style_init();
-
-    sim_init_data();
-
-    lv_obj_t *scr = lv_screen_active();
-    lv_obj_set_style_bg_color(scr, COLOR_BG, 0);
-
-    tabview = lv_tabview_create(scr);
-    lv_tabview_set_tab_bar_position(tabview, LV_DIR_BOTTOM);
-    lv_tabview_set_tab_bar_size(tabview, 50);
-    lv_obj_set_style_bg_color(tabview, COLOR_BG, 0);
-    lv_obj_set_style_text_font(
-        lv_tabview_get_tab_btns(tabview), &lv_font_montserrat_14, 0);
-
-    lv_obj_t *tab_status = lv_tabview_add_tab(tabview, "状态");
-    lv_obj_t *tab_devices = lv_tabview_add_tab(tabview, "设备");
-    lv_obj_t *tab_logs = lv_tabview_add_tab(tabview, "日志");
-
-    lv_obj_set_style_bg_color(tab_status, COLOR_BG, 0);
-    lv_obj_set_style_bg_color(tab_devices, COLOR_BG, 0);
-    lv_obj_set_style_bg_color(tab_logs, COLOR_BG, 0);
-
-    status_page = ui_status_page_create(tab_status);
-    ui_status_page_update(&sim_status, sim_devices, sim_device_count);
-
-    devices_page = ui_devices_page_create(tab_devices);
-    ui_devices_page_update(sim_devices, sim_device_count);
-
-    create_log_page(tab_logs);
-
-    wifi_overlay = ui_wifi_page_create(lv_layer_top());
-    sle_overlay = ui_sle_page_create(lv_layer_top());
-
-    ui_set_wifi_page_cb(open_wifi_page);
-    ui_set_sle_page_cb(open_sle_page);
-    ui_devices_set_add_cb(open_sle_page);
-
-    while (1) {
-        uint32_t time_till_next = lv_timer_handler();
-        lv_delay_ms(LV_MIN(time_till_next, 1));
-    }
-
-    return 0;
 }
