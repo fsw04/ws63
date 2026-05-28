@@ -11,13 +11,13 @@ if(DEFINED CONFIG_ENABLE_WATCHCONTROL)
         ${CMAKE_CURRENT_SOURCE_DIR}/mqtt_task.c
         ${CMAKE_CURRENT_SOURCE_DIR}/sle_speed_server.c
         ${CMAKE_CURRENT_SOURCE_DIR}/sle_speed_server_adv.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/display_port.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ui_task.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ui_style.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ui_status_page.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ui_devices_page.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ui_wifi_page.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ui_sle_page.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/display_port.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/ui_task.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/ui_style.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/ui_status_page.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/ui_devices_page.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/ui_wifi_page.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ui/ui_sle_page.c
     )
     set(MAIN_COMPONENT true)
 else()
@@ -31,6 +31,7 @@ set(PUBLIC_HEADER
 
 set(PRIVATE_HEADER
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui
     ${ROOT_DIR}/kernel/osal/include
     ${ROOT_DIR}/kernel/osal/include/msgqueue
     ${ROOT_DIR}/include
