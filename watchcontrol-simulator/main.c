@@ -93,7 +93,7 @@ int main(int argc, char **argv)
   lv_tabview_set_tab_bar_size(tabview, 50);
   lv_obj_set_style_bg_color(tabview, COLOR_BG, 0);
   lv_obj_set_style_text_font(
-      lv_tabview_get_tab_btns(tabview), &lv_font_montserrat_14, 0);
+      lv_tabview_get_tab_btns(tabview), FONT_CN_14, 0);
 
   lv_obj_t *tab_status = lv_tabview_add_tab(tabview, "状态");
   lv_obj_t *tab_devices = lv_tabview_add_tab(tabview, "设备");
@@ -216,7 +216,7 @@ static void create_log_page(lv_obj_t *parent)
 
     lv_obj_t *title = lv_label_create(page);
     lv_label_set_text(title, "系统日志");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(title, FONT_CN_16, 0);
     lv_obj_set_style_text_color(title, COLOR_TEXT_PRIMARY, 0);
 
     log_list = lv_obj_create(page);
@@ -273,7 +273,7 @@ static void create_log_page(lv_obj_t *parent)
 
         lv_obj_t *msg = lv_label_create(row);
         lv_label_set_text(msg, logs[i]);
-        lv_obj_set_style_text_font(msg, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_font(msg, FONT_CN_14, 0);
         lv_obj_set_style_text_color(msg, COLOR_TEXT_SECONDARY, 0);
     }
 }

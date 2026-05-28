@@ -1,5 +1,6 @@
 #include "ui_status_page.h"
 #include "ui_style.h"
+#include "ui_common.h"
 
 static lv_obj_t *page_root;
 static lv_obj_t *wifi_card, *mqtt_card, *sle_card;
@@ -81,7 +82,7 @@ static lv_obj_t *create_card(lv_obj_t *parent, const char *title,
 
     lv_obj_t *detail_label = lv_label_create(mid);
     lv_label_set_text(detail_label, "--");
-    lv_obj_set_style_text_font(detail_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(detail_label, FONT_CN_14, 0);
     lv_obj_set_style_text_color(detail_label, COLOR_TEXT_SECONDARY, 0);
 
     lv_obj_t *dot = create_status_dot(card, COLOR_RED);
@@ -128,12 +129,12 @@ static lv_obj_t *create_wifi_card(lv_obj_t *parent)
 
     wifi_ssid_label = lv_label_create(mid);
     lv_label_set_text(wifi_ssid_label, "未连接");
-    lv_obj_set_style_text_font(wifi_ssid_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(wifi_ssid_label, FONT_CN_14, 0);
     lv_obj_set_style_text_color(wifi_ssid_label, COLOR_TEXT_SECONDARY, 0);
 
     wifi_ip_label = lv_label_create(mid);
     lv_label_set_text(wifi_ip_label, "");
-    lv_obj_set_style_text_font(wifi_ip_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(wifi_ip_label, FONT_CN_14, 0);
     lv_obj_set_style_text_color(wifi_ip_label, COLOR_TEXT_DIM, 0);
 
     wifi_settings_btn = lv_btn_create(card);
@@ -190,22 +191,22 @@ static lv_obj_t *create_arc_section(lv_obj_t *parent)
 
     arc_online_label = lv_label_create(labels);
     lv_label_set_text(arc_online_label, "在线: 0");
-    lv_obj_set_style_text_font(arc_online_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(arc_online_label, FONT_CN_14, 0);
     lv_obj_set_style_text_color(arc_online_label, COLOR_GREEN, 0);
 
     arc_offline_label = lv_label_create(labels);
     lv_label_set_text(arc_offline_label, "离线: 0");
-    lv_obj_set_style_text_font(arc_offline_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(arc_offline_label, FONT_CN_14, 0);
     lv_obj_set_style_text_color(arc_offline_label, COLOR_RED, 0);
 
     arc_idle_label = lv_label_create(labels);
     lv_label_set_text(arc_idle_label, "空闲: 0");
-    lv_obj_set_style_text_font(arc_idle_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(arc_idle_label, FONT_CN_14, 0);
     lv_obj_set_style_text_color(arc_idle_label, COLOR_YELLOW, 0);
 
     arc_borrowed_label = lv_label_create(labels);
     lv_label_set_text(arc_borrowed_label, "借出: 0");
-    lv_obj_set_style_text_font(arc_borrowed_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(arc_borrowed_label, FONT_CN_14, 0);
     lv_obj_set_style_text_color(arc_borrowed_label, COLOR_CYAN, 0);
 
     return section;
@@ -235,7 +236,7 @@ lv_obj_t *ui_status_page_create(lv_obj_t *parent)
 
     sle_count_label = lv_label_create(lv_obj_get_parent(sle_detail));
     lv_label_set_text(sle_count_label, "连接: 0");
-    lv_obj_set_style_text_font(sle_count_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(sle_count_label, FONT_CN_14, 0);
     lv_obj_set_style_text_color(sle_count_label, COLOR_TEXT_DIM, 0);
 
     create_arc_section(page_root);

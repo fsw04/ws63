@@ -56,6 +56,13 @@ typedef enum {
 #define MAX_DEVICES 8
 #define MAX_DISCOVERED 8
 
+#define FONT_CN_14  &lv_font_source_han_sans_sc_14_cjk
+#define FONT_CN_16  &lv_font_source_han_sans_sc_16_cjk
+#define FONT_EN_12  &lv_font_montserrat_12
+#define FONT_EN_14  &lv_font_montserrat_14
+#define FONT_EN_16  &lv_font_montserrat_16
+#define FONT_EN_18  &lv_font_montserrat_18
+
 typedef void (*ui_event_cb_t)(void *user_data);
 
 typedef struct {

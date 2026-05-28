@@ -1,5 +1,6 @@
 #include "ui_wifi_page.h"
 #include "ui_style.h"
+#include "ui_common.h"
 
 static lv_obj_t *overlay;
 static lv_obj_t *panel;
@@ -62,7 +63,7 @@ lv_obj_t *ui_wifi_page_create(lv_obj_t *parent)
 
     lv_obj_t *title = lv_label_create(header);
     lv_label_set_text(title, "连接WiFi");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(title, FONT_CN_16, 0);
     lv_obj_set_style_text_color(title, COLOR_TEXT_PRIMARY, 0);
 
     lv_obj_t *spacer = lv_obj_create(header);
@@ -87,14 +88,14 @@ lv_obj_t *ui_wifi_page_create(lv_obj_t *parent)
 
     conn_info_label = lv_label_create(panel);
     lv_label_set_text(conn_info_label, "");
-    lv_obj_set_style_text_font(conn_info_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(conn_info_label, FONT_CN_14, 0);
     lv_obj_set_style_text_color(conn_info_label, COLOR_TEXT_SECONDARY, 0);
     lv_obj_add_flag(conn_info_label, LV_OBJ_FLAG_HIDDEN);
 
     ssid_ta = lv_textarea_create(panel);
     lv_textarea_set_one_line(ssid_ta, true);
     lv_textarea_set_placeholder_text(ssid_ta, "输入WiFi名称");
-    lv_obj_set_style_text_font(ssid_ta, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(ssid_ta, FONT_CN_14, 0);
     lv_obj_add_style(ssid_ta, &style_input, 0);
     lv_obj_set_width(ssid_ta, LV_PCT(100));
 
@@ -102,7 +103,7 @@ lv_obj_t *ui_wifi_page_create(lv_obj_t *parent)
     lv_textarea_set_one_line(password_ta, true);
     lv_textarea_set_password_mode(password_ta, true);
     lv_textarea_set_placeholder_text(password_ta, "输入WiFi密码");
-    lv_obj_set_style_text_font(password_ta, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(password_ta, FONT_CN_14, 0);
     lv_obj_add_style(password_ta, &style_input, 0);
     lv_obj_set_width(password_ta, LV_PCT(100));
 
@@ -112,7 +113,7 @@ lv_obj_t *ui_wifi_page_create(lv_obj_t *parent)
     lv_obj_add_event_cb(connect_btn, connect_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *btn_lbl = lv_label_create(connect_btn);
     lv_label_set_text(btn_lbl, "连接");
-    lv_obj_set_style_text_font(btn_lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(btn_lbl, FONT_CN_14, 0);
     lv_obj_center(btn_lbl);
 
     spinner_obj = lv_spinner_create(panel);
