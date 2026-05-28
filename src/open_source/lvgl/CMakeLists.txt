@@ -25,6 +25,9 @@ set(COMPONENT_PUBLIC_CCFLAGS
 
 set(COMPONENT_CCFLAGS
 -DLV_CONF_INCLUDE_SIMPLE
+    -DLV_FONT_MONTSERRAT_10=1
+    -DLV_FONT_MONTSERRAT_12=1
+    -DLV_FONT_MONTSERRAT_16=1
     -Wno-jump-misses-init
     -Wno-error=unused-parameter
 )
