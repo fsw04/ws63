@@ -1,6 +1,7 @@
 #include "ui_devices_page.h"
 #include "ui_style.h"
-#include "ui_status_page.h"
+
+extern void ui_set_sle_page_cb(void (*cb)(void *));
 
 #define SWIPE_THRESHOLD 40
 
