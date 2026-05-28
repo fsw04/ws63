@@ -4,8 +4,9 @@
 #include "wifi_task.h"
 #include "mqtt_task.h"
 #include "sensor_task.h"
-#include "ui_task.h"
 #include "sle_speed_server.h"
+
+extern void ui_task_start(void);
 
 #define DEFAULT_TASK_STACK_SIZE         0x1000
 #define DEFAULT_TASK_PRIORITY           24
