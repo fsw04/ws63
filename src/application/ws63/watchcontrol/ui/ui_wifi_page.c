@@ -24,6 +24,7 @@ static void connect_cb(lv_event_t *e)
 
 lv_obj_t *ui_wifi_page_create(lv_obj_t *parent)
 {
+    (void)parent;
     overlay = lv_obj_create(lv_layer_top());
     lv_obj_set_size(overlay, LV_PCT(100), LV_PCT(100));
     lv_obj_set_style_bg_color(overlay, lv_color_black(), 0);
