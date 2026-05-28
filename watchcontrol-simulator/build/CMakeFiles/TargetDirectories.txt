@@ -1,3 +1,0 @@
-/workspace/watchcontrol-simulator/build/CMakeFiles/watchcontrol_simulator.dir
-/workspace/watchcontrol-simulator/build/CMakeFiles/edit_cache.dir
-/workspace/watchcontrol-simulator/build/CMakeFiles/rebuild_cache.dir

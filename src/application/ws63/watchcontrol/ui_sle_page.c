@@ -95,7 +95,7 @@ static void create_discovered_item(int idx, const ui_discovered_t *dev)
 
     lv_obj_t *name_label = lv_label_create(info);
     lv_label_set_text(name_label, dev->name[0] ? dev->name : "未知设备");
-    lv_obj_set_style_text_font(name_label, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(name_label, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(name_label, COLOR_TEXT_PRIMARY, 0);
 
     lv_obj_t *mac_label = lv_label_create(info);
@@ -112,7 +112,7 @@ static void create_discovered_item(int idx, const ui_discovered_t *dev)
                         (void *)(intptr_t)idx);
     lv_obj_t *btn_lbl = lv_label_create(connect_btn);
     lv_label_set_text(btn_lbl, "连接");
-    lv_obj_set_style_text_font(btn_lbl, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(btn_lbl, &lv_font_montserrat_12, 0);
     lv_obj_center(btn_lbl);
 
     discovered_items[idx].card = card;
@@ -159,7 +159,7 @@ lv_obj_t *ui_sle_page_create(lv_obj_t *parent)
 
     lv_obj_t *title = lv_label_create(header);
     lv_label_set_text(title, "SLE设备扫描");
-    lv_obj_set_style_text_font(title, FONT_CN_16, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(title, COLOR_TEXT_PRIMARY, 0);
 
     lv_obj_t *spacer = lv_obj_create(header);
@@ -213,7 +213,7 @@ lv_obj_t *ui_sle_page_create(lv_obj_t *parent)
     lv_obj_set_width(device_list, LV_PCT(100));
     lv_obj_set_scroll_dir(device_list, LV_DIR_VER);
     lv_obj_add_flag(device_list, LV_OBJ_FLAG_SCROLL_CHAIN);
-    lv_obj_set_style_max_height(device_list, 240, 0);
+    lv_obj_set_max_height(device_list, 240);
 
     lv_obj_t *legend = lv_obj_create(panel);
     lv_obj_set_size(legend, LV_PCT(100), LV_SIZE_CONTENT);
@@ -227,17 +227,17 @@ lv_obj_t *ui_sle_page_create(lv_obj_t *parent)
 
     lv_obj_t *leg_strong = lv_label_create(legend);
     lv_label_set_text(leg_strong, "强");
-    lv_obj_set_style_text_font(leg_strong, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(leg_strong, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(leg_strong, COLOR_GREEN, 0);
 
     lv_obj_t *leg_mid = lv_label_create(legend);
     lv_label_set_text(leg_mid, "中");
-    lv_obj_set_style_text_font(leg_mid, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(leg_mid, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(leg_mid, COLOR_YELLOW, 0);
 
     lv_obj_t *leg_weak = lv_label_create(legend);
     lv_label_set_text(leg_weak, "弱");
-    lv_obj_set_style_text_font(leg_weak, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(leg_weak, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(leg_weak, COLOR_RED, 0);
 
     lv_obj_t *leg_spacer = lv_obj_create(legend);
@@ -249,7 +249,7 @@ lv_obj_t *ui_sle_page_create(lv_obj_t *parent)
 
     count_label = lv_label_create(legend);
     lv_label_set_text(count_label, "发现: 0");
-    lv_obj_set_style_text_font(count_label, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(count_label, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(count_label, COLOR_TEXT_SECONDARY, 0);
 
     return overlay;

@@ -26,7 +26,7 @@ void ui_style_init(void)
     lv_style_set_bg_opa(&style_btn_green, LV_OPA_COVER);
     lv_style_set_radius(&style_btn_green, 6);
     lv_style_set_text_color(&style_btn_green, COLOR_BG);
-    lv_style_set_text_font(&style_btn_green, FONT_CN_14);
+    lv_style_set_text_font(&style_btn_green, &lv_font_montserrat_12);
     lv_style_set_pad_ver(&style_btn_green, 6);
     lv_style_set_pad_hor(&style_btn_green, 12);
 
@@ -35,7 +35,7 @@ void ui_style_init(void)
     lv_style_set_bg_opa(&style_btn_red, LV_OPA_COVER);
     lv_style_set_radius(&style_btn_red, 6);
     lv_style_set_text_color(&style_btn_red, COLOR_BG);
-    lv_style_set_text_font(&style_btn_red, FONT_CN_14);
+    lv_style_set_text_font(&style_btn_red, &lv_font_montserrat_12);
     lv_style_set_pad_ver(&style_btn_red, 6);
     lv_style_set_pad_hor(&style_btn_red, 12);
 
@@ -44,7 +44,7 @@ void ui_style_init(void)
     lv_style_set_bg_opa(&style_btn_yellow, LV_OPA_COVER);
     lv_style_set_radius(&style_btn_yellow, 6);
     lv_style_set_text_color(&style_btn_yellow, COLOR_BG);
-    lv_style_set_text_font(&style_btn_yellow, FONT_CN_14);
+    lv_style_set_text_font(&style_btn_yellow, &lv_font_montserrat_12);
     lv_style_set_pad_ver(&style_btn_yellow, 6);
     lv_style_set_pad_hor(&style_btn_yellow, 12);
 
@@ -55,7 +55,7 @@ void ui_style_init(void)
     lv_style_set_border_width(&style_input, 1);
     lv_style_set_radius(&style_input, 6);
     lv_style_set_text_color(&style_input, COLOR_TEXT_PRIMARY);
-    lv_style_set_text_font(&style_input, FONT_CN_14);
+    lv_style_set_text_font(&style_input, &lv_font_montserrat_12);
     lv_style_set_pad_all(&style_input, 6);
 }
 
@@ -73,10 +73,10 @@ lv_style_t *ui_style_tab_btn(bool active)
     if (!inited) {
         lv_style_init(&style_tab_active);
         lv_style_set_text_color(&style_tab_active, COLOR_GREEN);
-        lv_style_set_text_font(&style_tab_active, FONT_CN_14);
+        lv_style_set_text_font(&style_tab_active, &lv_font_montserrat_12);
         lv_style_init(&style_tab_inactive);
         lv_style_set_text_color(&style_tab_inactive, COLOR_TEXT_DIM);
-        lv_style_set_text_font(&style_tab_inactive, FONT_CN_14);
+        lv_style_set_text_font(&style_tab_inactive, &lv_font_montserrat_12);
         inited = true;
     }
     return active ? &style_tab_active : &style_tab_inactive;

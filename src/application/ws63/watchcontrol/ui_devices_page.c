@@ -1,6 +1,5 @@
 #include "ui_devices_page.h"
 #include "ui_style.h"
-#include "ui_common.h"
 
 #define SWIPE_THRESHOLD 40
 
@@ -138,7 +137,7 @@ static void show_delete_confirm(int idx)
 
     lv_obj_t *mbox = lv_msgbox_create(NULL);
     lv_msgbox_add_text(mbox, buf);
-    lv_obj_set_style_text_font(mbox, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(mbox, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(mbox, COLOR_TEXT_PRIMARY, 0);
     lv_obj_set_style_bg_color(mbox, COLOR_CARD, 0);
 
@@ -165,7 +164,7 @@ static void show_borrow_dialog(int idx)
 
     lv_obj_t *mbox = lv_msgbox_create(NULL);
     lv_msgbox_add_text(mbox, buf);
-    lv_obj_set_style_text_font(mbox, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(mbox, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(mbox, COLOR_TEXT_PRIMARY, 0);
     lv_obj_set_style_bg_color(mbox, COLOR_CARD, 0);
 
@@ -173,7 +172,7 @@ static void show_borrow_dialog(int idx)
     lv_obj_t *ta = lv_textarea_create(content);
     lv_textarea_set_one_line(ta, true);
     lv_textarea_set_placeholder_text(ta, "输入借用人");
-    lv_obj_set_style_text_font(ta, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(ta, &lv_font_montserrat_12, 0);
     lv_obj_add_style(ta, &style_input, 0);
     lv_obj_set_width(ta, LV_PCT(100));
 
@@ -201,7 +200,7 @@ static void show_return_dialog(int idx)
 
     lv_obj_t *mbox = lv_msgbox_create(NULL);
     lv_msgbox_add_text(mbox, buf);
-    lv_obj_set_style_text_font(mbox, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(mbox, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(mbox, COLOR_TEXT_PRIMARY, 0);
     lv_obj_set_style_bg_color(mbox, COLOR_CARD, 0);
 
@@ -214,17 +213,10 @@ static void show_return_dialog(int idx)
                         (void *)(intptr_t)idx);
 }
 
-static ui_event_cb_t add_device_cb = NULL;
-
-void ui_devices_set_add_cb(ui_event_cb_t cb)
-{
-    add_device_cb = cb;
-}
-
 static void add_btn_cb(lv_event_t *e)
 {
     LV_UNUSED(e);
-    if (add_device_cb) add_device_cb(NULL);
+    extern void ui_set_sle_page_cb(ui_event_cb_t cb);
 }
 
 static void create_device_item(int idx)
@@ -249,7 +241,7 @@ static void create_device_item(int idx)
                         (void *)(intptr_t)idx);
     lv_obj_t *del_label = lv_label_create(delete_btn);
     lv_label_set_text(del_label, "删除");
-    lv_obj_set_style_text_font(del_label, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(del_label, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(del_label, lv_color_white(), 0);
     lv_obj_center(del_label);
 
@@ -273,12 +265,12 @@ static void create_device_item(int idx)
 
     lv_obj_t *name_label = lv_label_create(card);
     lv_label_set_text(name_label, dev->name);
-    lv_obj_set_style_text_font(name_label, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(name_label, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(name_label, COLOR_TEXT_PRIMARY, 0);
 
     lv_obj_t *status_tag = lv_label_create(card);
     lv_label_set_text(status_tag, status_text(dev->status));
-    lv_obj_set_style_text_font(status_tag, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(status_tag, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(status_tag, status_color(dev->status), 0);
 
     lv_obj_t *conn_dot = create_status_dot(card,
@@ -300,7 +292,7 @@ static void create_device_item(int idx)
                             (void *)(intptr_t)idx);
         lv_obj_t *btn_lbl = lv_label_create(action_btn);
         lv_label_set_text(btn_lbl, "申请");
-        lv_obj_set_style_text_font(btn_lbl, FONT_CN_14, 0);
+        lv_obj_set_style_text_font(btn_lbl, &lv_font_montserrat_12, 0);
         lv_obj_center(btn_lbl);
     } else if (dev->status == 1) {
         action_btn = lv_btn_create(card);
@@ -310,7 +302,7 @@ static void create_device_item(int idx)
                             (void *)(intptr_t)idx);
         lv_obj_t *btn_lbl = lv_label_create(action_btn);
         lv_label_set_text(btn_lbl, "返还");
-        lv_obj_set_style_text_font(btn_lbl, FONT_CN_14, 0);
+        lv_obj_set_style_text_font(btn_lbl, &lv_font_montserrat_12, 0);
         lv_obj_center(btn_lbl);
     }
 
@@ -358,17 +350,17 @@ lv_obj_t *ui_devices_page_create(lv_obj_t *parent)
 
     lv_obj_t *title = lv_label_create(header);
     lv_label_set_text(title, "设备列表");
-    lv_obj_set_style_text_font(title, FONT_CN_16, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(title, COLOR_TEXT_PRIMARY, 0);
 
     idle_count_label = lv_label_create(header);
     lv_label_set_text(idle_count_label, "空闲:0");
-    lv_obj_set_style_text_font(idle_count_label, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(idle_count_label, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(idle_count_label, COLOR_GREEN, 0);
 
     borrowed_count_label = lv_label_create(header);
     lv_label_set_text(borrowed_count_label, "借出:0");
-    lv_obj_set_style_text_font(borrowed_count_label, FONT_CN_14, 0);
+    lv_obj_set_style_text_font(borrowed_count_label, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(borrowed_count_label, COLOR_YELLOW, 0);
 
     lv_obj_t *spacer = lv_obj_create(header);
