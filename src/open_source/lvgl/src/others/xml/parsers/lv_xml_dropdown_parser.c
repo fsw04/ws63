@@ -7,7 +7,7 @@
  *      INCLUDES
  *********************/
 #include "lv_xml_dropdown_parser.h"
-#if LV_USE_XML && LV_USE_DROPDOWN
+#if LV_USE_XML
 
 #include "../../../lvgl.h"
 #include "../../../lvgl_private.h"

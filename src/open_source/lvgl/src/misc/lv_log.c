@@ -108,7 +108,9 @@ void lv_log_add(lv_log_level_t level, const char * file, int line, const char * 
         else {
             printf("[%s]" LOG_TIMESTAMP_FMT " %s: ",
                    lvl_prefix[level], LOG_TIMESTAMP_EXPR func);
+            vprintf(format, args);
             printf(LOG_FILE_LINE_FMT "\n" LOG_FILE_LINE_EXPR);
+            fflush(stdout);
         }
 #endif
 

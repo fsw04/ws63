@@ -27,25 +27,21 @@ extern "C" {
 
 typedef struct _lv_monkey_t lv_monkey_t;
 
-typedef struct {
-    int32_t min;
-    int32_t max;
-} lv_range_t;
-
-typedef struct {
-    uint32_t min;
-    uint32_t max;
-} lv_urange_t;
-
 struct _lv_monkey_config_t {
     /** Input device type */
     lv_indev_type_t type;
 
     /** Monkey execution period */
-    lv_urange_t period_range;
+    struct {
+        uint32_t min;
+        uint32_t max;
+    } period_range;
 
     /** The range of input value */
-    lv_range_t input_range;
+    struct {
+        int32_t min;
+        int32_t max;
+    } input_range;
 };
 
 /**********************

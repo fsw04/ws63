@@ -383,6 +383,26 @@ menu "SPI Sample Configuration"
 endmenu
 endif
 
+config SAMPLE_SUPPORT_ST7796S_FT6336U
+    bool
+    prompt "Support ST7796S LCD + FT6336U touch Sample."
+    default n
+    depends on ENABLE_PERIPHERAL_SAMPLE && DRIVER_SUPPORT_TIMER
+    select DRIVER_SUPPORT_GPIO
+    select DRIVER_SUPPORT_PINCTRL
+    select DRIVER_SUPPORT_SPI
+    select SPI_SUPPORT_MASTER
+    select DRIVER_SUPPORT_I2C
+    select I2C_SUPPORT_MASTER
+    help
+        This option means support the ST7796S LCD and FT6336U touch sample.
+
+if SAMPLE_SUPPORT_ST7796S_FT6336U
+menu "ST7796S LCD + FT6336U Touch Sample Configuration"
+    osource "application/samples/peripheral/st7796s_ft6336u/Kconfig"
+endmenu
+endif
+
 config SAMPLE_SUPPORT_SYSTICK
     bool
     prompt "Support SYSTICK Sample."

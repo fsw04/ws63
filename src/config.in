@@ -43,4 +43,3 @@ menu "Test"
     comment "Config the test."
     osource "test/Kconfig"
 endmenu
-

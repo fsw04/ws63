@@ -3,8 +3,8 @@
  *
  */
 
-#ifndef LV_XML_ROLLER_PARSER_H
-#define LV_XML_ROLLER_PARSER_H
+#ifndef LV_ROLLER_XML_PARSER_H
+#define LV_ROLLER_XML_PARSER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,7 +14,7 @@ extern "C" {
  *      INCLUDES
  *********************/
 #include "../lv_xml.h"
-#if LV_USE_XML && LV_USE_ROLLER
+#if LV_USE_XML
 
 /**********************
  *      TYPEDEFS
@@ -37,4 +37,4 @@ void lv_xml_roller_apply(lv_xml_parser_state_t * state, const char ** attrs);
 } /*extern "C"*/
 #endif
 
-#endif /*LV_XML_ROLLER_PARSER_H*/
+#endif /*LV_ROLLER_XML_PARSE_H*/

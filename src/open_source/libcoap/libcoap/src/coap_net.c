@@ -1395,6 +1395,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
   uint8_t r;
   ssize_t bytes_written;
   coap_opt_iterator_t opt_iter;
+  coap_queue_t *node = NULL;
 
   pdu->session = session;
   if (pdu->code == COAP_RESPONSE_CODE(508)) {
@@ -1602,7 +1603,7 @@ coap_send_internal(coap_session_t *session, coap_pdu_t *pdu) {
     return id;
   }
 
-  coap_queue_t *node = coap_new_node();
+  node = coap_new_node();
   if (!node) {
     coap_log_debug("coap_wait_ack: insufficient memory\n");
     goto error;

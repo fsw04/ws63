@@ -88,13 +88,8 @@ target = {
             "coap",
             "sle_netdev", "chba_at",
             "tiot_driver",
+            "",
             "lvgl",
-            "watchcontrol",
-            "watchdevice",
-            "max30102",
-            "heart",
-            "sle_MAX30102",
-            "lcd_touch",
             "mqtt"
         ],
         'ccflags': [

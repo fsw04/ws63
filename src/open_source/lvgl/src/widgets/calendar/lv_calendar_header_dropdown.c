@@ -1,5 +1,5 @@
 /**
- * @file lv_calendar_header_dropdown.c
+ * @file lv_calendar_obj_dropdown.c
  *
  */
 
@@ -119,8 +119,7 @@ static void my_constructor(const lv_obj_class_t * class_p, lv_obj_t * obj)
     lv_obj_set_flex_grow(month_dd, 1);
 
     lv_obj_add_event_cb(obj, value_changed_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
-
-    /*Refresh the drop down*/
+    /*Refresh the drop downs*/
     lv_obj_send_event(obj, LV_EVENT_VALUE_CHANGED, NULL);
 }
 

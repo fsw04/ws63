@@ -70,6 +70,10 @@ if(DEFINED CONFIG_SAMPLE_SUPPORT_SPI)
     add_subdirectory_if_exist(spi)
 endif()
 
+if(DEFINED CONFIG_SAMPLE_SUPPORT_ST7796S_FT6336U)
+    add_subdirectory_if_exist(st7796s_ft6336u)
+endif()
+
 if(DEFINED CONFIG_SAMPLE_SUPPORT_SYSTICK)
     add_subdirectory_if_exist(systick)
 endif()

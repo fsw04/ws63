@@ -12,7 +12,7 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "lv_os_private.h"
+#include "lv_os.h"
 
 #if LV_USE_OS == LV_OS_CMSIS_RTOS2
 
@@ -47,6 +47,7 @@ lv_result_t lv_thread_init(lv_thread_t * thread, const char * const name, lv_thr
                            void (*callback)(void *), size_t stack_size,
                            void * user_data)
 {
+    LV_UNUSED(name);
     static const osPriority_t prio_map[] = {
         [LV_THREAD_PRIO_LOWEST] = osPriorityLow,
         [LV_THREAD_PRIO_LOW] = osPriorityBelowNormal,
@@ -56,7 +57,6 @@ lv_result_t lv_thread_init(lv_thread_t * thread, const char * const name, lv_thr
     };
 
     osThreadAttr_t c_tThreadAttribute = {
-        .name = name, /* ws63 add: Fix the issue which task can not be created when task name is null.*/
         .stack_size = stack_size,
         .priority = prio_map[prio],
     };
@@ -85,8 +85,8 @@ lv_result_t lv_thread_delete(lv_thread_t * thread)
 lv_result_t lv_mutex_init(lv_mutex_t * mutex)
 {
     const osMutexAttr_t Thread_Mutex_attr = {
-        .name = "LVGLMutex", /* ws63 add: Fix the building issue, -Werror=missing-field-initializers.*/
-        .attr_bits = osMutexRecursive | osMutexPrioInherit | osMutexRobust,
+        "LVGLMutex",
+        osMutexRecursive | osMutexPrioInherit | osMutexRobust,
     };
 
     *mutex = osMutexNew(&Thread_Mutex_attr);
@@ -196,10 +196,6 @@ uint32_t lv_os_get_idle_percent(void)
     return lv_timer_get_idle();
 }
 
-void lv_sleep_ms(uint32_t ms)
-{
-    osDelay(ms);
-}
 /**********************
  *   STATIC FUNCTIONS
  **********************/

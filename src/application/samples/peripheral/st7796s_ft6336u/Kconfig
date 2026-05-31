@@ -1,0 +1,124 @@
+#===============================================================================
+# @brief    ST7796S LCD + FT6336U touch sample configuration
+#===============================================================================
+config ST7796S_SPI_BUS_ID
+    int
+    prompt "ST7796S SPI bus id."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 0
+
+config ST7796S_SPI_MISO_PIN
+    int
+    prompt "ST7796S SPI MISO pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 11
+
+config ST7796S_SPI_MOSI_PIN
+    int
+    prompt "ST7796S SPI MOSI pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 9
+
+config ST7796S_SPI_CLK_PIN
+    int
+    prompt "ST7796S SPI clock pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 7
+
+config ST7796S_SPI_CS_PIN
+    int
+    prompt "ST7796S SPI chip-select pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 10
+
+config ST7796S_SPI_PIN_MODE
+    int
+    prompt "ST7796S SPI pin mode."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 3
+
+config ST7796S_SPI_FREQUENCY_MHZ
+    int
+    prompt "ST7796S SPI frequency in MHz."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 32
+
+config ST7796S_LCD_DC_PIN
+    int
+    prompt "ST7796S LCD DC/RS GPIO pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 6
+
+config ST7796S_LCD_RESET_PIN
+    int
+    prompt "ST7796S LCD reset GPIO pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 3
+
+config ST7796S_LCD_BL_PIN
+    int
+    prompt "ST7796S LCD backlight GPIO pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 8
+
+config ST7796S_LCD_BL_ENABLE
+    bool
+    prompt "Drive ST7796S LCD backlight GPIO high."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default y
+
+config ST7796S_MADCTL
+    hex
+    prompt "ST7796S MADCTL value."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 0x48
+
+config ST7796S_LVGL_RGB565_SWAPPED
+    bool
+    prompt "Use LVGL RGB565 swapped color format."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default y
+    help
+        Enable this when the SPI panel expects RGB565 high byte first.
+
+config FT6336U_I2C_BUS_ID
+    int
+    prompt "FT6336U I2C bus id."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 1
+
+config FT6336U_I2C_SDA_PIN
+    int
+    prompt "FT6336U I2C SDA pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 15
+
+config FT6336U_I2C_SCL_PIN
+    int
+    prompt "FT6336U I2C SCL pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 16
+
+config FT6336U_I2C_PIN_MODE
+    int
+    prompt "FT6336U I2C pin mode."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 2
+
+config FT6336U_RESET_PIN
+    int
+    prompt "FT6336U reset GPIO pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 12
+
+config FT6336U_INT_PIN
+    int
+    prompt "FT6336U interrupt GPIO pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 13
+
+config FT6336U_USE_INT_PIN
+    bool
+    prompt "Configure FT6336U INT pin as input."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default n

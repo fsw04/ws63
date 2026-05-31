@@ -242,13 +242,6 @@ uint32_t lv_tabview_get_tab_active(lv_obj_t * obj)
     return tabview->tab_cur;
 }
 
-lv_obj_t * lv_tabview_get_tab_button(lv_obj_t * obj, int32_t idx)
-{
-    LV_ASSERT_OBJ(obj, MY_CLASS);
-
-    return lv_obj_get_child_by_type(lv_tabview_get_tab_bar(obj), idx, &lv_button_class);
-}
-
 uint32_t lv_tabview_get_tab_count(lv_obj_t * obj)
 {
     LV_ASSERT_OBJ(obj, MY_CLASS);
@@ -312,23 +305,8 @@ static void button_clicked_event_cb(lv_event_t * e)
     lv_obj_t * button = lv_event_get_current_target(e);
 
     lv_obj_t * tv = lv_obj_get_parent(lv_obj_get_parent(button));
-
-    if(tv == NULL) return;
-
-    /* Remember currently active tab before the click */
-    uint32_t prev_idx = lv_tabview_get_tab_active(tv);
-
-    /* Index of the button that was clicked */
-    uint32_t idx = lv_obj_get_index_by_type(button, &lv_button_class);
-
-    /* Switch to the requested tab */
+    int32_t idx = lv_obj_get_index_by_type(button, &lv_button_class);
     lv_tabview_set_active(tv, idx, LV_ANIM_OFF);
-
-    /* If the tab really changed, notify listeners just like the
-     * swipe/scroll handler does. */
-    if(prev_idx != idx) {
-        lv_obj_send_event(tv, LV_EVENT_VALUE_CHANGED, NULL);
-    }
 }
 
 static void cont_scroll_end_event_cb(lv_event_t * e)

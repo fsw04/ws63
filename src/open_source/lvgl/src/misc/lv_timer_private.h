@@ -33,7 +33,7 @@ struct _lv_timer_t {
     lv_timer_cb_t timer_cb;    /**< Timer function */
     void * user_data;          /**< Custom user data */
     int32_t repeat_count;      /**< 1: One time;  -1 : infinity;  n>0: residual times */
-    volatile int paused;
+    uint32_t paused : 1;
     uint32_t auto_delete : 1;
 };
 
@@ -44,7 +44,7 @@ typedef struct {
     uint8_t idle_last;
     bool timer_deleted;
     bool timer_created;
-    volatile uint32_t timer_time_until_next;
+    uint32_t timer_time_until_next;
 
     bool already_running;
     uint32_t periodic_last_tick;

@@ -98,7 +98,6 @@ void lv_timer_delete(lv_timer_t * timer);
 
 /**
  * Pause a timer.
- * It is typically safe to call from an interrupt handler or a different thread.
  * @param timer pointer to an lv_timer
  */
 void lv_timer_pause(lv_timer_t * timer);
