@@ -3,8 +3,8 @@
 #include "app_init.h"
 #include "soc_osal.h"
 #include "watch_app.h"
-#include "watch_model.h"
-#include "watch_ui.h"
+#include "../model/watch_model.h"
+#include "../ui/watch_ui.h"
 
 static timer_handle_t g_timer_handle = NULL;
 static uint8_t g_lvgl_buf[ST7796S_WIDTH * ST7796S_FT6336U_RENDER_ROWS * ST7796S_FT6336U_BYTE_PER_PIXEL];

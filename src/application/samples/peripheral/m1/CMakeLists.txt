@@ -1,0 +1,9 @@
+#===============================================================================
+# @brief    M1 PN532 sample cmake file
+# Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2023. All rights reserved.
+#===============================================================================
+set(SOURCES
+    "${SOURCES}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/m1_pn532.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/m1_app.c"
+    PARENT_SCOPE)

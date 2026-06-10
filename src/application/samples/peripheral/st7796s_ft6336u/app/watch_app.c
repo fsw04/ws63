@@ -1,14 +1,14 @@
 #include "watch_app.h"
 
-#include "sle_watch_server.h"
+#include "../services/sle_watch_server.h"
 #include "soc_osal.h"
-#include "watch_model.h"
-#include "wifi_task.h"
+#include "../services/vitals_report.h"
+#include "../model/watch_model.h"
+#include "../tasks/watch_nfc_task.h"
+#include "../services/wifi_task.h"
 
 #define WATCH_APP_TASK_STACK_SIZE 0x2000
 #define WATCH_APP_TASK_PRIORITY 24
-#define WATCH_APP_WIFI_SSID "FSW"
-#define WATCH_APP_WIFI_PWD "a2821840334"
 
 static void *watch_app_task(const char *arg)
 {
@@ -18,7 +18,12 @@ static void *watch_app_task(const char *arg)
     sle_watch_server_start();
 
     watch_model_add_log(WATCH_LOG_WIFI, "WiFi", "start controller");
-    wifi_task_start(WATCH_APP_WIFI_SSID, WATCH_APP_WIFI_PWD);
+    wifi_task_start(NULL, NULL);
+
+    watch_model_add_log(WATCH_LOG_DEVICE, "NFC", "start reader");
+    watch_nfc_task_start();
+
+    vitals_report_start();
 
     while (1) {
         osal_msleep(10000);

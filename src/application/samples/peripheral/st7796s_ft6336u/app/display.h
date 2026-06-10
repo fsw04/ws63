@@ -2,9 +2,9 @@
 #define ST7796S_FT6336U_DISPLAY_H
 
 #include "chip_core_irq.h"
-#include "ft6336u.h"
+#include "../drivers/ft6336u.h"
 #include "lvgl.h"
-#include "st7796s.h"
+#include "../drivers/st7796s.h"
 #include "timer.h"
 
 #define ST7796S_FT6336U_TIMER_INDEX 1

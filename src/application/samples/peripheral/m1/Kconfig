@@ -1,0 +1,27 @@
+#===============================================================================
+# @brief    M1 PN532 sample Kconfig file.
+# Copyright (c) HiSilicon (Shanghai) Technologies Co., Ltd. 2023-2023. All rights reserved.
+#===============================================================================
+config M1_PN532_SOFT_I2C_SCL_PIN
+    int
+    prompt "Choose M1 PN532 software I2C SCL GPIO pin."
+    depends on SAMPLE_SUPPORT_M1
+    default 2
+
+config M1_PN532_SOFT_I2C_SDA_PIN
+    int
+    prompt "Choose M1 PN532 software I2C SDA GPIO pin."
+    depends on SAMPLE_SUPPORT_M1
+    default 14
+
+config M1_PN532_SOFT_I2C_DELAY_US
+    int
+    prompt "Choose M1 PN532 software I2C half clock delay in microseconds."
+    depends on SAMPLE_SUPPORT_M1
+    default 5
+
+config M1_PN532_POLL_INTERVAL_MS
+    int
+    prompt "Set M1 card polling interval in milliseconds."
+    depends on SAMPLE_SUPPORT_M1
+    default 1000

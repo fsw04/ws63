@@ -52,6 +52,20 @@ menu "ADC Sample Configuration"
 endmenu
 endif
 
+config SAMPLE_SUPPORT_M1
+    bool
+    prompt "Support M1 Sample."
+    default n
+    depends on ENABLE_PERIPHERAL_SAMPLE
+    help
+        This option means support M1 Sample.
+
+if SAMPLE_SUPPORT_M1
+menu "M1 Sample Configuration"
+    osource "application/samples/peripheral/m1/Kconfig"
+endmenu
+endif
+
 config SAMPLE_SUPPORT_AMIC
     bool
     prompt "Support AMIC Sample."

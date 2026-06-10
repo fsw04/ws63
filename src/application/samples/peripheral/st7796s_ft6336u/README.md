@@ -19,7 +19,7 @@ Touch I2C1:
 - GPIO_15: I2C1_SDA
 - GPIO_16: I2C1_SCL
 - GPIO_12: FT6336U RST
-- GPIO_13: FT6336U INT, optional and unused by default
+- GPIO_2: FT6336U INT, optional and unused by default
 
 All logic pins are 3.3 V. Connect the backlight cathode through a current-limiting path to ground as required by the module.
 

@@ -1,11 +1,13 @@
 #include "mqtt_task.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "MQTTClient.h"
 #include "securec.h"
 #include "soc_osal.h"
-#include "watch_model.h"
+#include "vitals_report.h"
+#include "../model/watch_model.h"
 
 #define MQTT_SERVER_URL "tcp://192.168.43.110:1883"
 #define MQTT_BROKER_TEXT "192.168.43.110:1883"
@@ -19,6 +21,7 @@
 #define MQTT_TASK_STACK_SIZE 0x2000
 #define MQTT_TASK_PRIORITY 25
 #define MQTT_TASK_STOP_MSG "__STOP__"
+#define MQTT_PUBLISH_TIMEOUT_MS 5000
 
 extern int MQTTClient_init(void);
 extern void MQTTClient_cleanup(void);
@@ -40,6 +43,37 @@ static int mqtt_message_arrived(void *context, char *topic_name, int topic_len, 
     return 1;
 }
 
+bool mqtt_task_is_connected(void)
+{
+    return g_mqtt_connected != 0;
+}
+
+errcode_t mqtt_task_enqueue_report(const char *payload)
+{
+    uint32_t len;
+
+    if ((payload == NULL) || (payload[0] == '\0') || (g_mqtt_msg_queue == 0) || (g_mqtt_connected == 0)) {
+        osal_printk("[MQTT] enqueue skipped payload=%p queue=0x%x connected=%u\r\n",
+                    payload, (unsigned int)g_mqtt_msg_queue, (unsigned int)g_mqtt_connected);
+        return ERRCODE_FAIL;
+    }
+
+    len = (uint32_t)strlen(payload) + 1;
+    if (len > MQTT_QUEUE_MSG_SIZE) {
+        osal_printk("[MQTT] enqueue too large len=%u max=%u\r\n",
+                    (unsigned int)len, (unsigned int)MQTT_QUEUE_MSG_SIZE);
+        watch_model_add_log(WATCH_LOG_WARNING, "MQTT", "report too large");
+        return ERRCODE_FAIL;
+    }
+    if (osal_msg_queue_write_copy(g_mqtt_msg_queue, (void *)payload, len, 0) != 0) {
+        osal_printk("[MQTT] enqueue failed len=%u\r\n", (unsigned int)len);
+        watch_model_add_log(WATCH_LOG_WARNING, "MQTT", "queue full");
+        return ERRCODE_FAIL;
+    }
+    osal_printk("[MQTT] enqueue report len=%u\r\n", (unsigned int)(len - 1));
+    return ERRCODE_SUCC;
+}
+
 errcode_t mqtt_task_publish(const char *payload)
 {
     MQTTClient_message pubmsg = MQTTClient_message_initializer;
@@ -55,8 +89,17 @@ errcode_t mqtt_task_publish(const char *payload)
     pubmsg.qos = 1;
     pubmsg.retained = 0;
     rc = MQTTClient_publishMessage(g_mqtt_client, MQTT_TOPIC_PUB, &pubmsg, &token);
+    osal_printk("[MQTT] publish topic=%s len=%u rc=%d token=%d\r\n",
+                MQTT_TOPIC_PUB, (unsigned int)pubmsg.payloadlen, rc, token);
     if (rc != MQTTCLIENT_SUCCESS) {
         watch_model_add_log(WATCH_LOG_WARNING, "MQTT", "publish failed");
+        return ERRCODE_FAIL;
+    }
+
+    rc = MQTTClient_waitForCompletion(g_mqtt_client, token, MQTT_PUBLISH_TIMEOUT_MS);
+    osal_printk("[MQTT] publish wait token=%d rc=%d\r\n", token, rc);
+    if (rc != MQTTCLIENT_SUCCESS) {
+        watch_model_add_log(WATCH_LOG_WARNING, "MQTT", "publish ack failed");
         return ERRCODE_FAIL;
     }
 
@@ -67,8 +110,13 @@ errcode_t mqtt_task_publish(const char *payload)
 
 void mqtt_task_stop(void)
 {
+    if (g_mqtt_task_running == 0) {
+        g_mqtt_stop_requested = 0;
+        return;
+    }
+
     g_mqtt_stop_requested = 1;
-    if (g_mqtt_msg_queue != 0) {
+    if ((g_mqtt_msg_queue != 0) && (g_mqtt_connected != 0)) {
         (void)osal_msg_queue_write_copy(g_mqtt_msg_queue, (void *)MQTT_TASK_STOP_MSG,
                                         (unsigned int)sizeof(MQTT_TASK_STOP_MSG), 0);
     }
@@ -142,16 +190,35 @@ static void *mqtt_main_task(const char *arg)
     watch_model_set_mqtt(WATCH_LINK_CONNECTED, MQTT_BROKER_TEXT, MQTT_TOPIC_PUB, "--");
     watch_model_add_log(WATCH_LOG_MQTT, "MQTT", "subscribed commands");
     (void)MQTTClient_subscribe(g_mqtt_client, MQTT_TOPIC_SUB, 1);
+    vitals_report_flush_pending();
 
     while (1) {
-        unsigned int read_size = sizeof(recv_buf) - 1;
+        static uint32_t read_fail_count = 0;
+        unsigned int read_size = sizeof(recv_buf);
         int ret = osal_msg_queue_read_copy(g_mqtt_msg_queue, recv_buf, &read_size, OSAL_WAIT_FOREVER);
-        if (ret == 0) {
-            recv_buf[read_size] = '\0';
-            if (strcmp(recv_buf, MQTT_TASK_STOP_MSG) == 0) {
-                break;
+        if (ret != 0) {
+            read_fail_count++;
+            if ((read_fail_count == 1U) || ((read_fail_count % 100U) == 0U)) {
+                osal_printk("[MQTT] queue read failed ret=%d size=%u queue=0x%x\r\n",
+                            ret, read_size, (unsigned int)g_mqtt_msg_queue);
             }
-            (void)mqtt_task_publish(recv_buf);
+            osal_msleep(20);
+            continue;
+        }
+
+        read_fail_count = 0;
+        if (read_size >= sizeof(recv_buf)) {
+            recv_buf[sizeof(recv_buf) - 1] = '\0';
+        } else {
+            recv_buf[read_size] = '\0';
+        }
+        if (strcmp(recv_buf, MQTT_TASK_STOP_MSG) == 0) {
+            break;
+        }
+        osal_printk("[MQTT] queue recv len=%u payload:%s\r\n",
+                    (unsigned int)strlen(recv_buf), recv_buf);
+        if (mqtt_task_publish(recv_buf) != ERRCODE_SUCC) {
+            (void)vitals_report_cache_pending(recv_buf);
         }
     }
 

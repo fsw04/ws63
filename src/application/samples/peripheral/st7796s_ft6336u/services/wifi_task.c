@@ -8,10 +8,11 @@
 #include "nv.h"
 #include "securec.h"
 #include "soc_osal.h"
-#include "watch_model.h"
+#include "../model/watch_model.h"
 #include "wifi_device.h"
 #include "wifi_hotspot.h"
 #include "wifi_hotspot_config.h"
+#include "wifi_provision.h"
 
 #define WIFI_STA_IP_MAX_GET_TIMES 15
 #define WIFI_RSSI_DEFAULT (-42)
@@ -54,6 +55,8 @@ static void ip_to_text(uint32_t addr, char *buf, uint32_t len)
 static errcode_t wifi_profile_save(const char *ssid, const char *pwd)
 {
     wifi_profile_store_t store = {0};
+    errcode_t write_ret;
+    errcode_t flush_ret;
 
     if ((ssid == NULL) || (pwd == NULL) || (ssid[0] == '\0')) {
         return ERRCODE_FAIL;
@@ -68,11 +71,21 @@ static errcode_t wifi_profile_save(const char *ssid, const char *pwd)
         return ERRCODE_FAIL;
     }
 
-    if (uapi_nv_write(WIFI_PROFILE_NV_KEY, (uint8_t *)&store, sizeof(store)) != ERRCODE_SUCC) {
+    write_ret = uapi_nv_write(WIFI_PROFILE_NV_KEY, (uint8_t *)&store, sizeof(store));
+    osal_printk("[WIFI] profile save key=0x%x ssid=%s len=%u write_ret=0x%x\r\n",
+                (unsigned int)WIFI_PROFILE_NV_KEY, store.ssid,
+                (unsigned int)sizeof(store), (unsigned int)write_ret);
+    if (write_ret != ERRCODE_SUCC) {
         watch_model_add_log(WATCH_LOG_WARNING, "WiFi", "save profile failed");
         return ERRCODE_FAIL;
     }
-    (void)uapi_nv_flush();
+    flush_ret = uapi_nv_flush();
+    osal_printk("[WIFI] profile flush key=0x%x ret=0x%x\r\n",
+                (unsigned int)WIFI_PROFILE_NV_KEY, (unsigned int)flush_ret);
+    if (flush_ret != ERRCODE_SUCC) {
+        watch_model_add_log(WATCH_LOG_WARNING, "WiFi", "flush profile failed");
+        return ERRCODE_FAIL;
+    }
     watch_model_add_log(WATCH_LOG_WIFI, "WiFi", "profile saved");
     return ERRCODE_SUCC;
 }
@@ -81,12 +94,20 @@ bool wifi_task_get_saved_profile(wifi_profile_t *profile)
 {
     wifi_profile_store_t store = {0};
     uint16_t value_len = 0;
+    errcode_t read_ret;
 
     if (profile == NULL) {
         return false;
     }
 
-    if (uapi_nv_read(WIFI_PROFILE_NV_KEY, sizeof(store), &value_len, (uint8_t *)&store) != ERRCODE_SUCC) {
+    read_ret = uapi_nv_read(WIFI_PROFILE_NV_KEY, sizeof(store), &value_len, (uint8_t *)&store);
+    store.ssid[sizeof(store.ssid) - 1] = '\0';
+    store.pwd[sizeof(store.pwd) - 1] = '\0';
+    osal_printk("[WIFI] profile read key=0x%x ret=0x%x value_len=%u magic=0x%x version=%u ssid=%s\r\n",
+                (unsigned int)WIFI_PROFILE_NV_KEY, (unsigned int)read_ret,
+                (unsigned int)value_len, (unsigned int)store.magic,
+                (unsigned int)store.version, store.ssid);
+    if (read_ret != ERRCODE_SUCC) {
         profile->ssid[0] = '\0';
         profile->pwd[0] = '\0';
         return false;
@@ -94,6 +115,10 @@ bool wifi_task_get_saved_profile(wifi_profile_t *profile)
 
     if ((value_len != sizeof(store)) || (store.magic != WIFI_PROFILE_MAGIC) ||
         (store.version != WIFI_PROFILE_VERSION) || (store.ssid[0] == '\0')) {
+        osal_printk("[WIFI] profile invalid key=0x%x value_len=%u expected=%u magic=0x%x version=%u\r\n",
+                    (unsigned int)WIFI_PROFILE_NV_KEY, (unsigned int)value_len,
+                    (unsigned int)sizeof(store), (unsigned int)store.magic,
+                    (unsigned int)store.version);
         profile->ssid[0] = '\0';
         profile->pwd[0] = '\0';
         return false;
@@ -105,6 +130,8 @@ bool wifi_task_get_saved_profile(wifi_profile_t *profile)
     if (strncpy_s(profile->pwd, sizeof(profile->pwd), store.pwd, sizeof(profile->pwd) - 1) != EOK) {
         return false;
     }
+    osal_printk("[WIFI] profile loaded key=0x%x ssid=%s\r\n",
+                (unsigned int)WIFI_PROFILE_NV_KEY, profile->ssid);
     return true;
 }
 
@@ -184,6 +211,7 @@ static errcode_t wifi_disconnect_start(void)
 
     mqtt_task_stop();
     (void)wifi_sta_disconnect();
+    wifi_provision_stop();
     (void)wifi_sta_disable();
     watch_model_set_wifi(WATCH_LINK_DISCONNECTED, ssid, "--", WIFI_RSSI_DEFAULT);
     watch_model_set_mqtt(WATCH_LINK_DISCONNECTED, model.mqtt_broker, model.mqtt_topic, "--");
@@ -202,6 +230,7 @@ static void wifi_task_handle_connect(const wifi_profile_t *profile)
     mqtt_task_stop();
     osal_msleep(100);
     (void)wifi_sta_disconnect();
+    wifi_provision_stop();
     if (wifi_connect_start(profile->ssid, profile->pwd) == ERRCODE_SUCC) {
         mqtt_task_start();
     }

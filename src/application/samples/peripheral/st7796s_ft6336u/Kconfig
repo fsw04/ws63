@@ -115,10 +115,38 @@ config FT6336U_INT_PIN
     int
     prompt "FT6336U interrupt GPIO pin."
     depends on SAMPLE_SUPPORT_ST7796S_FT6336U
-    default 13
+    default 2
 
 config FT6336U_USE_INT_PIN
     bool
     prompt "Configure FT6336U INT pin as input."
     depends on SAMPLE_SUPPORT_ST7796S_FT6336U
     default n
+
+config M1_PN532_SOFT_I2C_SCL_PIN
+    int
+    prompt "M1 PN532 software I2C SCL GPIO pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 13
+    help
+        Choose a GPIO that does not conflict with the LCD SPI pins or FT6336U touch pins.
+
+config M1_PN532_SOFT_I2C_SDA_PIN
+    int
+    prompt "M1 PN532 software I2C SDA GPIO pin."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 14
+    help
+        Choose a GPIO that does not conflict with the LCD SPI pins or FT6336U touch pins.
+
+config M1_PN532_SOFT_I2C_DELAY_US
+    int
+    prompt "M1 PN532 software I2C half clock delay in microseconds."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 5
+
+config M1_PN532_POLL_INTERVAL_MS
+    int
+    prompt "M1 PN532 card polling interval in milliseconds."
+    depends on SAMPLE_SUPPORT_ST7796S_FT6336U
+    default 500

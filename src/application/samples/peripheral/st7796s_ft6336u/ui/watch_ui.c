@@ -2,9 +2,12 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include "../services/sle_watch_server.h"
 #include "securec.h"
-#include "watch_model.h"
-#include "wifi_task.h"
+#include "../business/watch_borrow.h"
+#include "../model/watch_model.h"
+#include "../services/wifi_provision.h"
+#include "../services/wifi_task.h"
 
 #define UI_W 320
 #define UI_H 480
@@ -16,7 +19,7 @@
 #define UI_CARD_RADIUS 12
 #define UI_REFRESH_MS 1000
 #define UI_DEVICE_ROW_W 304
-#define UI_DEVICE_ROW_H 62
+#define UI_DEVICE_ROW_H 78
 #define UI_DEVICE_ACTION_OPEN_X (-58)
 
 #define C_BG 0x070B15
@@ -58,6 +61,9 @@ typedef struct {
     lv_obj_t *wifi_pwd_ta;
     lv_obj_t *keyboard;
     lv_obj_t *device_swipe_card;
+    lv_obj_t *scan_list;
+    lv_obj_t *scan_count_label;
+    uint8_t scan_modal_open;
     watch_page_t page;
     uint8_t pending_delete_index;
     char pending_delete_name[WATCH_MODEL_NAME_LEN];
@@ -96,8 +102,13 @@ static void wifi_pwd_event_cb(lv_event_t *e);
 static void wifi_keyboard_event_cb(lv_event_t *e);
 static void wifi_submit_event_cb(lv_event_t *e);
 static void wifi_disconnect_event_cb(lv_event_t *e);
+static void wifi_manual_config_event_cb(lv_event_t *e);
+static void wifi_provision_stop_event_cb(lv_event_t *e);
+static void open_wifi_provision_modal(void);
 static void open_wifi_modal(bool open_keyboard);
 static void show_wifi_modal(lv_event_t *e);
+static void refresh_scan_modal(const watch_model_snapshot_t *model);
+static void device_action_event_cb(lv_event_t *e);
 
 static lv_color_t color(uint32_t value)
 {
@@ -406,6 +417,12 @@ static void nav_event_cb(lv_event_t *e)
 
 static void close_modal(void)
 {
+    if (g_ui.scan_modal_open != 0) {
+        (void)sle_watch_scan_stop();
+        g_ui.scan_modal_open = 0;
+        g_ui.scan_list = NULL;
+        g_ui.scan_count_label = NULL;
+    }
     close_keyboard();
     if (g_ui.modal != NULL) {
         lv_obj_delete(g_ui.modal);
@@ -610,6 +627,7 @@ static lv_obj_t *wifi_textarea(lv_obj_t *parent, int32_t x, int32_t y, const cha
 {
     lv_obj_t *ta = lv_textarea_create(parent);
     lv_obj_remove_style_all(ta);
+    lv_obj_add_flag(ta, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_CLICK_FOCUSABLE);
     lv_obj_set_pos(ta, x, y);
     lv_obj_set_size(ta, 280, 42);
     lv_obj_set_style_radius(ta, 10, 0);
@@ -653,13 +671,16 @@ static void wifi_show_keyboard(lv_obj_t *ta)
     lv_keyboard_set_textarea(g_ui.keyboard, ta);
     lv_textarea_set_cursor_pos(ta, LV_TEXTAREA_CURSOR_LAST);
     lv_obj_add_state(ta, LV_STATE_FOCUSED);
+    lv_obj_move_foreground(ta);
+    lv_obj_clear_flag(g_ui.keyboard, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(g_ui.keyboard);
 }
 
 static void wifi_ssid_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    if ((code == LV_EVENT_FOCUSED) || (code == LV_EVENT_CLICKED)) {
+    if ((code == LV_EVENT_PRESSED) || (code == LV_EVENT_FOCUSED) || (code == LV_EVENT_CLICKED)) {
+        lv_event_stop_bubbling(e);
         wifi_show_keyboard(lv_event_get_current_target_obj(e));
     }
 }
@@ -667,7 +688,8 @@ static void wifi_ssid_event_cb(lv_event_t *e)
 static void wifi_pwd_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    if ((code == LV_EVENT_FOCUSED) || (code == LV_EVENT_CLICKED)) {
+    if ((code == LV_EVENT_PRESSED) || (code == LV_EVENT_FOCUSED) || (code == LV_EVENT_CLICKED)) {
+        lv_event_stop_bubbling(e);
         wifi_show_keyboard(lv_event_get_current_target_obj(e));
     }
 }
@@ -717,9 +739,12 @@ static void wifi_action_event_cb(lv_event_t *e)
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
         return;
     }
+    lv_event_stop_bubbling(e);
 
     if (action == WIFI_UI_CONFIG) {
-        open_wifi_modal(true);
+        (void)wifi_provision_start();
+        open_wifi_provision_modal();
+        watch_ui_request_refresh();
         return;
     }
 
@@ -742,6 +767,7 @@ static void open_wifi_modal(bool open_keyboard)
     lv_obj_t *ssid = label(modal, "SSID", &g_style_muted);
     lv_obj_set_pos(ssid, 0, 52);
     g_ui.wifi_ssid_ta = wifi_textarea(modal, 0, 76, "WiFi SSID", WIFI_MAX_SSID_LEN - 1, false);
+    lv_obj_add_event_cb(g_ui.wifi_ssid_ta, wifi_ssid_event_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(g_ui.wifi_ssid_ta, wifi_ssid_event_cb, LV_EVENT_FOCUSED, NULL);
     lv_obj_add_event_cb(g_ui.wifi_ssid_ta, wifi_ssid_event_cb, LV_EVENT_CLICKED, NULL);
     if (has_profile) {
@@ -751,6 +777,7 @@ static void open_wifi_modal(bool open_keyboard)
     lv_obj_t *pwd = label(modal, "密码", &g_style_muted);
     lv_obj_set_pos(pwd, 0, 126);
     g_ui.wifi_pwd_ta = wifi_textarea(modal, 0, 150, "Password", WIFI_MAX_KEY_LEN - 1, true);
+    lv_obj_add_event_cb(g_ui.wifi_pwd_ta, wifi_pwd_event_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(g_ui.wifi_pwd_ta, wifi_pwd_event_cb, LV_EVENT_FOCUSED, NULL);
     lv_obj_add_event_cb(g_ui.wifi_pwd_ta, wifi_pwd_event_cb, LV_EVENT_CLICKED, NULL);
     if (has_profile) {
@@ -773,42 +800,206 @@ static void show_wifi_modal(lv_event_t *e)
     open_wifi_modal(true);
 }
 
+static void wifi_manual_config_event_cb(lv_event_t *e)
+{
+    if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
+        lv_event_stop_bubbling(e);
+        open_wifi_modal(true);
+    }
+}
+
+static void wifi_provision_stop_event_cb(lv_event_t *e)
+{
+    if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
+        lv_event_stop_bubbling(e);
+        wifi_provision_stop();
+        close_wifi_modal();
+        watch_ui_request_refresh();
+    }
+}
+
+static void open_wifi_provision_modal(void)
+{
+    lv_obj_t *modal = modal_base("WiFi App Setup", LV_SYMBOL_WIFI);
+    lv_obj_set_pos(modal, 10, 22);
+    lv_obj_set_size(modal, UI_W - 20, 300);
+
+    lv_obj_t *line = label(modal, "SoftAP", &g_style_muted);
+    lv_obj_set_pos(line, 0, 56);
+    lv_obj_set_size(line, 280, 22);
+
+    line = label(modal, "SSID: " WIFI_PROV_AP_SSID, &g_style_text);
+    lv_obj_set_pos(line, 0, 84);
+    lv_obj_set_size(line, 280, 22);
+
+    line = label(modal, "PWD: " WIFI_PROV_AP_PASSWORD, &g_style_text);
+    lv_obj_set_pos(line, 0, 112);
+    lv_obj_set_size(line, 280, 22);
+
+    line = label(modal, "URL: http://" WIFI_PROV_AP_IP, &g_style_accent);
+    lv_obj_set_pos(line, 0, 150);
+    lv_obj_set_size(line, 280, 22);
+
+    line = label(modal, "POST " WIFI_PROV_HTTP_PATH, &g_style_muted);
+    lv_obj_set_pos(line, 0, 178);
+    lv_obj_set_size(line, 280, 22);
+
+    line = label(modal, "JSON: ssid,password", &g_style_muted);
+    lv_obj_set_pos(line, 0, 206);
+    lv_obj_set_size(line, 280, 22);
+
+    (void)text_button(modal, 0, 236, 132, 44, "Manual", C_PANEL_3, &g_style_accent,
+                      wifi_manual_config_event_cb, NULL);
+    (void)text_button(modal, 148, 236, 132, 44, "Stop AP", 0x4A1F2C, &g_style_red,
+                      wifi_provision_stop_event_cb, NULL);
+}
+
+static uint32_t scan_rssi_color(int8_t rssi)
+{
+    if (rssi == 127) {
+        return C_MUTED;
+    }
+    if (rssi >= -55) {
+        return C_ACCENT;
+    }
+    if (rssi >= -75) {
+        return C_YELLOW;
+    }
+    return C_RED;
+}
+
+static const char *scan_rssi_level(int8_t rssi)
+{
+    if (rssi == 127) {
+        return "--";
+    }
+    if (rssi >= -55) {
+        return "好";
+    }
+    if (rssi >= -75) {
+        return "中";
+    }
+    return "差";
+}
+
+static void scan_add_event_cb(lv_event_t *e)
+{
+    uintptr_t index = (uintptr_t)lv_event_get_user_data(e);
+    watch_model_snapshot_t model;
+
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
+        return;
+    }
+    lv_event_stop_bubbling(e);
+
+    if (sle_watch_connect_scan_result((uint8_t)index) == ERRCODE_SUCC) {
+        watch_model_get_snapshot(&model);
+        g_ui.model_version = model.version;
+        render_all(&model);
+        refresh_scan_modal(&model);
+    }
+}
+
+static void refresh_scan_modal(const watch_model_snapshot_t *model)
+{
+    char text[64];
+
+    if ((g_ui.scan_modal_open == 0) || (g_ui.scan_list == NULL) || (model == NULL)) {
+        return;
+    }
+
+    lv_obj_clean(g_ui.scan_list);
+    if (model->scan_count == 0) {
+        lv_obj_t *hint = label(g_ui.scan_list, model->scan_active ? "SLE扫描中..." : "未发现 watch-xx 设备",
+                               model->scan_active ? &g_style_accent : &g_style_muted);
+        lv_obj_set_size(hint, 260, 24);
+        lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_center(hint);
+    } else {
+        for (uint8_t i = 0; i < model->scan_count; i++) {
+            const watch_scan_device_t *dev = &model->scan_results[i];
+            int32_t y = (int32_t)i * 74;
+            lv_obj_t *item = card(g_ui.scan_list, 0, y, 280, 64, false);
+            uint32_t rssi_color = scan_rssi_color(dev->rssi);
+
+            icon_box(item, 0, 2, LV_SYMBOL_HOME, C_PANEL_3, rssi_color);
+
+            lv_obj_t *name = label(item, dev->name, &g_style_title);
+            lv_obj_set_pos(name, 50, 0);
+            lv_obj_set_size(name, 86, 24);
+
+            lv_obj_t *addr = mono_label(item, dev->address, C_MUTED);
+            lv_obj_set_pos(addr, 50, 28);
+            lv_obj_set_size(addr, 126, 20);
+
+            if (dev->rssi == 127) {
+                (void)snprintf_s(text, sizeof(text), sizeof(text) - 1, "%s  -- dBm", scan_rssi_level(dev->rssi));
+            } else {
+                (void)snprintf_s(text, sizeof(text), sizeof(text) - 1, "%s  %d dBm", scan_rssi_level(dev->rssi),
+                                 dev->rssi);
+            }
+            lv_obj_t *rssi = label(item, text, rssi_color == C_RED ? &g_style_red_sm :
+                                   (rssi_color == C_YELLOW ? &g_style_yellow : &g_style_accent_sm));
+            lv_obj_set_pos(rssi, 140, 2);
+            lv_obj_set_size(rssi, 72, 20);
+            lv_obj_set_style_text_align(rssi, LV_TEXT_ALIGN_RIGHT, 0);
+
+            lv_obj_t *btn = lv_button_create(item);
+            lv_obj_remove_style_all(btn);
+            lv_obj_set_pos(btn, 220, 8);
+            lv_obj_set_size(btn, 52, 40);
+            lv_obj_set_style_radius(btn, 10, 0);
+            lv_obj_set_style_bg_color(btn, color(dev->added ? 0x20263A : C_PANEL_3), 0);
+            lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
+            if (dev->added == 0) {
+                lv_obj_add_event_cb(btn, scan_add_event_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
+            }
+            lv_obj_t *btn_label = symbol_label(btn, dev->added ? LV_SYMBOL_OK : LV_SYMBOL_PLUS,
+                                               dev->added ? C_MUTED : C_ACCENT);
+            lv_obj_center(btn_label);
+        }
+    }
+
+    if (g_ui.scan_count_label != NULL) {
+        (void)snprintf_s(text, sizeof(text), sizeof(text) - 1,
+                         model->scan_active ? "扫描 %u 台设备" : "发现 %u 台设备", model->scan_count);
+        lv_label_set_text(g_ui.scan_count_label, text);
+    }
+}
+
 static void show_scan_modal(lv_event_t *e)
 {
+    watch_model_snapshot_t model;
+
     (void)e;
     lv_obj_t *modal = modal_base("SLE 设备搜寻", LV_SYMBOL_REFRESH);
+    lv_obj_set_pos(modal, 10, 58);
+    lv_obj_set_size(modal, UI_W - 20, 324);
 
-    lv_obj_t *item = card(modal, 0, 82, 280, 86, false);
-    icon_box(item, 0, 12, LV_SYMBOL_HOME, C_PANEL_3, C_ACCENT);
-    lv_obj_t *name = label(item, "watch-05", &g_style_title);
-    lv_obj_set_pos(name, 54, 6);
-    lv_obj_t *addr = label(item, "6B:20:4F:8E:1A:7D", &g_style_muted);
-    lv_obj_set_pos(addr, 54, 36);
-    lv_obj_t *rssi = label(item, "||||  -45 dBm", &g_style_accent);
-    lv_obj_set_pos(rssi, 156, 35);
+    g_ui.scan_modal_open = 1;
+    g_ui.scan_list = plain_obj(modal);
+    lv_obj_set_pos(g_ui.scan_list, 0, 58);
+    lv_obj_set_size(g_ui.scan_list, 280, 214);
+    lv_obj_set_scroll_dir(g_ui.scan_list, LV_DIR_VER);
+    lv_obj_set_scrollbar_mode(g_ui.scan_list, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_add_flag(g_ui.scan_list, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t *btn = lv_button_create(item);
-    lv_obj_remove_style_all(btn);
-    lv_obj_set_pos(btn, 218, 14);
-    lv_obj_set_size(btn, 58, 44);
-    lv_obj_set_style_radius(btn, 12, 0);
-    lv_obj_set_style_bg_color(btn, color(C_ACCENT), 0);
-    lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
-    lv_obj_t *btn_label = label(btn, "连接", &g_style_screen);
-    lv_obj_center(btn_label);
-
-    dot(modal, 0, 212, C_ACCENT);
+    dot(modal, 0, 288, C_ACCENT);
     lv_obj_t *strong = label(modal, "好", &g_style_muted);
-    lv_obj_set_pos(strong, 17, 204);
-    dot(modal, 58, 212, C_YELLOW);
+    lv_obj_set_pos(strong, 17, 280);
+    dot(modal, 58, 288, C_YELLOW);
     lv_obj_t *mid = label(modal, "中", &g_style_muted);
-    lv_obj_set_pos(mid, 75, 204);
-    dot(modal, 116, 212, C_RED);
+    lv_obj_set_pos(mid, 75, 280);
+    dot(modal, 116, 288, C_RED);
     lv_obj_t *weak = label(modal, "差", &g_style_muted);
-    lv_obj_set_pos(weak, 133, 204);
-    lv_obj_t *count = label(modal, "搜寻 1 台设备", &g_style_muted);
-    lv_obj_set_pos(count, 166, 204);
-    lv_obj_set_size(count, 110, 24);
+    lv_obj_set_pos(weak, 133, 280);
+    g_ui.scan_count_label = label(modal, "扫描 0 台设备", &g_style_muted);
+    lv_obj_set_pos(g_ui.scan_count_label, 166, 280);
+    lv_obj_set_size(g_ui.scan_count_label, 110, 24);
+
+    (void)sle_watch_scan_start();
+    watch_model_get_snapshot(&model);
+    refresh_scan_modal(&model);
 }
 
 static void create_header(lv_obj_t *screen)
@@ -880,8 +1071,6 @@ static void render_status_page(const watch_model_snapshot_t *model)
     lv_obj_t *page = g_ui.pages[PAGE_STATUS];
     uint8_t idle = 0;
     uint8_t borrowed = 0;
-    wifi_profile_t profile = {0};
-    bool has_profile = wifi_task_get_saved_profile(&profile);
 
     for (uint8_t i = 0; i < model->device_count; i++) {
         if (model->devices[i].state == WATCH_DEVICE_BORROWED) {
@@ -896,69 +1085,117 @@ static void render_status_page(const watch_model_snapshot_t *model)
     uint32_t wifi_color = link_color(model->wifi_state);
     uint32_t mqtt_color = link_color(model->mqtt_state);
     uint32_t sle_color = link_color(model->sle_state);
-    lv_obj_t *wifi = card(page, 8, 8, 304, 112, false);
-    icon_box(wifi, 0, 0, LV_SYMBOL_WIFI, link_icon_bg(model->wifi_state), wifi_color);
-    lv_obj_t *wifi_title = mono_title(wifi, "WiFi", C_TEXT);
-    lv_obj_set_pos(wifi_title, 50, 6);
-    dot(wifi, 212, 15, wifi_color);
-    lv_obj_t *wifi_state = label(wifi, link_text(model->wifi_state), link_style_sm(model->wifi_state));
-    lv_obj_set_pos(wifi_state, 228, 9);
-    lv_obj_set_size(wifi_state, 58, 20);
-    lv_obj_t *ssid = mono_label(wifi, "SSID", C_MUTED);
-    lv_obj_set_pos(ssid, 0, 50);
-    lv_obj_set_size(ssid, 70, 18);
-    lv_obj_t *ssid_value = mono_label(wifi, model->wifi_ssid, C_TEXT);
-    lv_obj_set_pos(ssid_value, 176, 50);
-    lv_obj_set_size(ssid_value, 120, 18);
-    lv_obj_t *ip = mono_label(wifi, "IP", C_MUTED);
-    lv_obj_set_pos(ip, 0, 74);
-    lv_obj_set_size(ip, 70, 18);
-    lv_obj_t *ip_value = mono_label(wifi, model->wifi_ip, C_TEXT);
-    lv_obj_set_pos(ip_value, 142, 74);
-    lv_obj_set_size(ip_value, 154, 18);
 
-    lv_obj_t *mqtt = card(page, 8, 132, 304, 116, false);
+    /* ========== WiFi 卡片创建代码 ========== */
+
+    lv_obj_t *wifi = card(page, 8, 8, 304, 112, false);
+
+    /* 1. 移除卡片本身的点击能力和模态框事件 —— 点击卡片空白处不再有任何反应 */
+    // lv_obj_add_flag(wifi, LV_OBJ_FLAG_CLICKABLE);                         // 已移除
+    // lv_obj_add_event_cb(wifi, show_wifi_modal, LV_EVENT_CLICKED, NULL);   // 已移除
+
+    icon_box(wifi, 0, 0, LV_SYMBOL_WIFI, link_icon_bg(model->wifi_state), wifi_color);
+
+    lv_obj_t *wifi_title = label(wifi, "WiFi", &g_style_title);
+    lv_obj_set_pos(wifi_title, 50, 7);
+    lv_obj_set_size(wifi_title, 74, 24);
+
+    /* 2. 设置按钮：保留原来的动作回调，并新增模态框回调 */
+    lv_obj_t *wifi_cfg_btn = lv_button_create(wifi);
+    lv_obj_remove_style_all(wifi_cfg_btn);
+    lv_obj_set_pos(wifi_cfg_btn, 178, 3);
+    lv_obj_set_size(wifi_cfg_btn, 36, 36);
+    lv_obj_set_style_radius(wifi_cfg_btn, 10, 0);
+    lv_obj_set_style_bg_color(wifi_cfg_btn, color(0x20263A), 0);
+    lv_obj_set_style_bg_opa(wifi_cfg_btn, LV_OPA_COVER, 0);
+
+    /* 先执行配置动作（WIFI_UI_CONFIG），再弹出模态框 */
+    lv_obj_add_event_cb(wifi_cfg_btn, wifi_action_event_cb, LV_EVENT_CLICKED,
+                        (void *)(uintptr_t)WIFI_UI_CONFIG);
+
+    lv_obj_t *wifi_cfg_icon = symbol_label(wifi_cfg_btn, LV_SYMBOL_SETTINGS, C_MUTED);
+    lv_obj_center(wifi_cfg_icon);
+
+    dot(wifi, 226, 15, wifi_color);
+
+    lv_obj_t *wifi_state = label(wifi, link_text(model->wifi_state), link_style_sm(model->wifi_state));
+    lv_obj_set_pos(wifi_state, 212, 9);
+    lv_obj_set_size(wifi_state, 58, 20);
+    lv_obj_set_style_text_align(wifi_state, LV_TEXT_ALIGN_RIGHT, 0);
+
+    lv_obj_t *wifi_caption = label(wifi, "状态", &g_style_muted);
+    lv_obj_set_pos(wifi_caption, 0, 62);
+    lv_obj_set_size(wifi_caption, 72, 22);
+    lv_obj_set_style_text_align(wifi_caption, LV_TEXT_ALIGN_LEFT, 0);
+
+    lv_obj_t *wifi_detail = label(wifi, "", model->wifi_state == WATCH_LINK_ERROR ? &g_style_red : &g_style_text);
+    if (model->wifi_state == WATCH_LINK_CONNECTED) {
+        lv_label_set_text(wifi_detail, model->wifi_ssid[0] != '\0' ? model->wifi_ssid : "已连接");
+    } else if (model->wifi_state == WATCH_LINK_CONNECTING) {
+        lv_label_set_text(wifi_detail, "正在连接");
+    } else if (model->wifi_state == WATCH_LINK_ERROR) {
+        lv_label_set_text(wifi_detail, "连接失效");
+    } else {
+        lv_label_set_text(wifi_detail, "未连接");
+    }
+    lv_obj_set_pos(wifi_detail, 120, 62);
+    lv_obj_set_size(wifi_detail, 158, 22);
+    lv_obj_set_style_text_align(wifi_detail, LV_TEXT_ALIGN_RIGHT, 0);
+
+    lv_obj_t *mqtt = card(page, 8, 132, 304, 125, false);
     icon_box(mqtt, 0, 4, LV_SYMBOL_DRIVE, link_icon_bg(model->mqtt_state), mqtt_color);
     lv_obj_t *mqtt_title = mono_title(mqtt, "MQTT", C_TEXT);
     lv_obj_set_pos(mqtt_title, 50, 10);
     dot(mqtt, 212, 17, mqtt_color);
     lv_obj_t *mqtt_state = label(mqtt, link_text(model->mqtt_state), link_style_sm(model->mqtt_state));
-    lv_obj_set_pos(mqtt_state, 228, 11);
+    lv_obj_set_pos(mqtt_state, 212, 9);
     lv_obj_set_size(mqtt_state, 58, 20);
+    lv_obj_set_style_text_align(mqtt_state, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_t *broker = mono_label(mqtt, "Broker", C_MUTED);
     lv_obj_set_pos(broker, 0, 58);
     lv_obj_set_size(broker, 70, 18);
+    lv_obj_set_style_text_align(broker, LV_TEXT_ALIGN_LEFT, 0);
     lv_obj_t *broker_value = mono_label(mqtt, model->mqtt_broker, C_TEXT);
-    lv_obj_set_pos(broker_value, 108, 58);
-    lv_obj_set_size(broker_value, 188, 18);
+    lv_obj_set_pos(broker_value, 90, 58);
+    lv_obj_set_size(broker_value, 188, 17);
+    lv_obj_set_style_text_align(broker_value, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_t *topic = mono_label(mqtt, "Topic", C_MUTED);
     lv_obj_set_pos(topic, 0, 84);
     lv_obj_set_size(topic, 70, 18);
+    lv_obj_set_style_text_align(topic, LV_TEXT_ALIGN_LEFT, 0);
     lv_obj_t *topic_value = mono_label(mqtt, model->mqtt_topic, C_TEXT);
-    lv_obj_set_pos(topic_value, 86, 84);
-    lv_obj_set_size(topic_value, 210, 18);
+    lv_obj_set_pos(topic_value, 90, 84);
+    lv_obj_set_size(topic_value, 180, 18);
+    lv_obj_set_style_text_align(topic_value, LV_TEXT_ALIGN_RIGHT, 0);
 
-    lv_obj_t *sle = card(page, 8, 260, 304, 116, false);
+    lv_obj_t *sle = card(page, 8, 270, 304, 116, false);
     icon_box(sle, 0, 0, LV_SYMBOL_WIFI, link_icon_bg(model->sle_state), sle_color);
     lv_obj_t *sle_title = label(sle, "SLE", &g_style_title);
     lv_obj_set_pos(sle_title, 50, 6);
     dot(sle, 212, 15, sle_color);
     lv_obj_t *sle_state = label(sle, link_text(model->sle_state), link_style_sm(model->sle_state));
-    lv_obj_set_pos(sle_state, 228, 9);
+    lv_obj_set_pos(sle_state, 212, 9);
     lv_obj_set_size(sle_state, 58, 20);
+    lv_obj_set_style_text_align(sle_state, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_t *service = label(sle, "服务", &g_style_muted);
     lv_obj_set_pos(service, 0, 52);
+    lv_obj_set_size(service, 70, 22);
+    lv_obj_set_style_text_align(service, LV_TEXT_ALIGN_LEFT, 0);
     lv_obj_t *service_value = mono_label(sle, model->sle_service, C_TEXT);
-    lv_obj_set_pos(service_value, 124, 52);
+    lv_obj_set_pos(service_value, 128, 52);
     lv_obj_set_size(service_value, 142, 22);
+    lv_obj_set_style_text_align(service_value, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_t *connected = label(sle, "已连接", &g_style_muted);
     lv_obj_set_pos(connected, 0, 76);
+    lv_obj_set_size(connected, 70, 22);
+    lv_obj_set_style_text_align(connected, LV_TEXT_ALIGN_LEFT, 0);
     lv_obj_t *connected_value = label(sle, "", &g_style_text);
     lv_label_set_text_fmt(connected_value, "%u 台设备", model->sle_connected_count);
-    lv_obj_set_pos(connected_value, 214, 76);
+    lv_obj_set_pos(connected_value, 188, 76);
     lv_obj_set_size(connected_value, 82, 22);
+    lv_obj_set_style_text_align(connected_value, LV_TEXT_ALIGN_RIGHT, 0);
 
-    lv_obj_t *summary = card(page, 8, 392, 304, 92, false);
+    lv_obj_t *summary = card(page, 8, 402, 304, 92, false);
     lv_obj_t *arc = lv_arc_create(summary);
     lv_obj_set_size(arc, 58, 58);
     lv_obj_set_pos(arc, 0, -4);
@@ -988,48 +1225,6 @@ static void render_status_page(const watch_model_snapshot_t *model)
     lv_obj_set_pos(sum_warn, 150, 52);
     lv_obj_set_size(sum_warn, 70, 20);
 
-    lv_obj_t *sys = card(page, 8, 496, 304, 118, false);
-    lv_obj_t *sys_title = label(sys, "#  系统信号", &g_style_muted);
-    lv_obj_set_pos(sys_title, 0, 0);
-    lv_obj_t *protocol = mono_label(sys, "Stack", C_MUTED);
-    lv_obj_set_pos(protocol, 0, 38);
-    lv_obj_t *protocol_value = label(sys, "SSAP / SLE 1.0", &g_style_text);
-    lv_obj_set_pos(protocol_value, 182, 38);
-    lv_obj_set_size(protocol_value, 114, 22);
-    lv_obj_t *qos = label(sys, "MQTT QoS", &g_style_muted);
-    lv_obj_set_pos(qos, 0, 62);
-    lv_obj_t *qos_value = label(sys, "1", &g_style_text);
-    lv_obj_set_pos(qos_value, 276, 62);
-    lv_obj_set_size(qos_value, 20, 22);
-    lv_obj_t *mtu = label(sys, "MTU", &g_style_muted);
-    lv_obj_set_pos(mtu, 0, 86);
-    lv_obj_t *mtu_value = label(sys, "1500 bytes", &g_style_text);
-    lv_obj_set_pos(mtu_value, 208, 86);
-    lv_obj_set_size(mtu_value, 88, 22);
-
-    lv_obj_t *wifi_ctrl = card(page, 8, 626, 304, UI_DEVICE_ROW_H, false);
-    lv_obj_add_flag(wifi_ctrl, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(wifi_ctrl, show_wifi_modal, LV_EVENT_CLICKED, NULL);
-    icon_box(wifi_ctrl, 0, 1, LV_SYMBOL_WIFI, link_icon_bg(model->wifi_state), wifi_color);
-    lv_obj_t *profile_label = label(wifi_ctrl, "WiFi", &g_style_title);
-    lv_obj_set_pos(profile_label, 50, 0);
-    lv_obj_set_size(profile_label, 46, 24);
-    lv_obj_t *profile_value = mono_label(wifi_ctrl, has_profile ? profile.ssid : "No SSID",
-                                         has_profile ? C_TEXT : C_MUTED);
-    lv_obj_set_pos(profile_value, 98, 2);
-    lv_obj_set_size(profile_value, 112, 22);
-    lv_obj_t *wifi_tip = label(wifi_ctrl,
-                               has_profile ? "点击修改 SSID / 密码" : "点击输入并保存 WiFi",
-                               has_profile ? &g_style_muted_sm : &g_style_yellow);
-    lv_obj_set_pos(wifi_tip, 50, 28);
-    lv_obj_set_size(wifi_tip, 154, 22);
-    if (model->wifi_state == WATCH_LINK_CONNECTED) {
-        (void)text_button(wifi_ctrl, 232, 4, 48, 42, "断开", 0x4A1F2C, &g_style_red,
-                          wifi_disconnect_event_cb, NULL);
-    } else {
-        (void)text_button(wifi_ctrl, 232, 4, 48, 42, "连接", C_PANEL_3, &g_style_accent,
-                          wifi_action_event_cb, (void *)(uintptr_t)WIFI_UI_CONNECT);
-    }
 }
 
 static const char *device_state_text(watch_device_state_t state)
@@ -1054,6 +1249,56 @@ static const lv_style_t *device_state_style(watch_device_state_t state)
         default:
             return &g_style_accent;
     }
+}
+
+static void device_action_event_cb(lv_event_t *e)
+{
+    uintptr_t index = (uintptr_t)lv_event_get_user_data(e);
+    watch_model_snapshot_t model;
+    watch_device_t device;
+
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
+        return;
+    }
+    lv_event_stop_bubbling(e);
+
+    watch_model_get_snapshot(&model);
+    if (index >= model.device_count) {
+        return;
+    }
+
+    device = model.devices[index];
+    if (device.online == 0) {
+        return;
+    }
+
+    if (device.state == WATCH_DEVICE_BORROWED) {
+        (void)watch_borrow_return((uint8_t)index);
+    } else if (device.state == WATCH_DEVICE_IDLE) {
+        (void)watch_borrow_request((uint8_t)index);
+    } else {
+        watch_model_add_log(WATCH_LOG_DEVICE, "BORROW", "waiting card");
+    }
+
+    watch_model_get_snapshot(&model);
+    g_ui.model_version = model.version;
+    render_all(&model);
+    return;
+
+#if 0
+    if (device.state == WATCH_DEVICE_IDLE) {
+        device.state = WATCH_DEVICE_BORROWED;
+        if (strncpy_s(device.borrower, sizeof(device.borrower), "用户",
+                      sizeof(device.borrower) - 1) != EOK) {
+            device.borrower[sizeof(device.borrower) - 1] = '\0';
+        }
+    }
+
+    watch_model_update_device((uint8_t)index, &device);
+    watch_model_get_snapshot(&model);
+    g_ui.model_version = model.version;
+    render_all(&model);
+#endif
 }
 
 static void render_device_page(const watch_model_snapshot_t *model)
@@ -1097,7 +1342,7 @@ static void render_device_page(const watch_model_snapshot_t *model)
 
     for (uint8_t i = 0; i < model->device_count; i++) {
         const watch_device_t *dev = &model->devices[i];
-        int32_t y = 48 + (int32_t)i * 72;
+        int32_t y = 48 + (int32_t)i * 88;
         lv_obj_t *row = plain_obj(page);
         lv_obj_set_pos(row, 8, y);
         lv_obj_set_size(row, UI_DEVICE_ROW_W, UI_DEVICE_ROW_H);
@@ -1105,8 +1350,8 @@ static void render_device_page(const watch_model_snapshot_t *model)
 
         lv_obj_t *delete_btn = lv_button_create(row);
         lv_obj_remove_style_all(delete_btn);
-        lv_obj_set_pos(delete_btn, 252, 6);
-        lv_obj_set_size(delete_btn, 42, 50);
+        lv_obj_set_pos(delete_btn, 252, 9);
+        lv_obj_set_size(delete_btn, 42, 60);
         lv_obj_set_style_radius(delete_btn, 10, 0);
         lv_obj_set_style_bg_color(delete_btn, color(0x4A1F2C), 0);
         lv_obj_set_style_bg_opa(delete_btn, LV_OPA_COVER, 0);
@@ -1124,27 +1369,34 @@ static void render_device_page(const watch_model_snapshot_t *model)
         icon_box(item, 0, 1, LV_SYMBOL_HOME, dev->online ? C_PANEL_3 : 0x273044, dev->online ? C_ACCENT : C_MUTED);
         lv_obj_t *name = label(item, dev->name, &g_style_title);
         lv_obj_set_pos(name, 50, 0);
-        lv_obj_set_size(name, 90, 24);
+        lv_obj_set_size(name, 76, 24);
         lv_obj_t *pill = label(item, device_state_text(dev->state), device_state_style(dev->state));
-        lv_obj_set_pos(pill, 134, 2);
-        lv_obj_set_size(pill, 54, 22);
+        lv_obj_set_pos(pill, 128, 2);
+        lv_obj_set_size(pill, 48, 22);
         dot(item, 50, 34, dev->online ? C_ACCENT : C_RED);
         lv_obj_t *state = label(item, dev->online ? "已连接" : "未连接", dev->online ? &g_style_muted_sm : &g_style_red_sm);
         lv_obj_set_pos(state, 66, 25);
-        lv_obj_set_size(state, 66, 20);
+        lv_obj_set_size(state, 58, 20);
         if (dev->borrower[0] != '\0') {
             lv_obj_t *borrower = label(item, dev->borrower, &g_style_muted_sm);
-            lv_obj_set_pos(borrower, 132, 26);
-            lv_obj_set_size(borrower, 82, 20);
+            lv_obj_set_pos(borrower, 128, 25);
+            lv_obj_set_size(borrower, 104, 20);
+        }
+        if (dev->borrower_id[0] != '\0') {
+            lv_obj_t *borrower_id = mono_label(item, dev->borrower_id, C_MUTED);
+            lv_obj_set_style_text_font(borrower_id, &lv_font_source_han_sans_sc_14_cjk, 0);
+            lv_obj_set_pos(borrower_id, 50, 49);
+            lv_obj_set_size(borrower_id, 182, 18);
         }
         if (dev->online != 0) {
             lv_obj_t *action = lv_button_create(item);
             lv_obj_remove_style_all(action);
-            lv_obj_set_pos(action, 232, -1);
-            lv_obj_set_size(action, 40, 40);
+            lv_obj_set_pos(action, 236, 4);
+            lv_obj_set_size(action, 36, 36);
             lv_obj_set_style_radius(action, 10, 0);
             lv_obj_set_style_bg_color(action, color(dev->state == WATCH_DEVICE_BORROWED ? 0x34342B : C_PANEL_3), 0);
             lv_obj_set_style_bg_opa(action, LV_OPA_COVER, 0);
+            lv_obj_add_event_cb(action, device_action_event_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
             lv_obj_t *action_label = symbol_label(action,
                                                   dev->state == WATCH_DEVICE_BORROWED ? LV_SYMBOL_UPLOAD : LV_SYMBOL_DOWNLOAD,
                                                   dev->state == WATCH_DEVICE_BORROWED ? C_YELLOW : C_ACCENT);
@@ -1192,23 +1444,20 @@ static void render_log_page(const watch_model_snapshot_t *model)
         lv_obj_t *warn = card(page, 8, 10, 304, 42, false);
         lv_obj_set_style_bg_color(warn, color(0x251421), 0);
         lv_obj_set_style_border_color(warn, color(0x6B2D40), 0);
-        lv_obj_t *warn_text = label(warn, "存在失效告知", &g_style_red);
-        lv_obj_set_pos(warn_text, 24, 7);
-        lv_obj_set_size(warn_text, 240, 24);
+        lv_obj_t *warn_text = label(warn, "存在失效通知", &g_style_red);
+        lv_obj_set_size(warn_text, 304, 26);           /* 宽度与卡片一致 */
+        lv_obj_set_style_text_align(warn_text, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_center(warn_text);                      /* 在卡片内完全居中 */
     }
 
     lv_obj_t *title = label(page, "通信日志", &g_style_title);
     lv_obj_set_pos(title, 8, 62);
-    lv_obj_t *count = label(page, "", &g_style_muted);
-    lv_label_set_text_fmt(count, "%u 条", model->log_count);
-    lv_obj_set_pos(count, 232, 64);
-    lv_obj_set_size(count, 78, 22);
 
     for (uint8_t i = 0; i < model->log_count; i++) {
         const watch_log_entry_t *entry = &model->logs[i];
-        int32_t y = 96 + (int32_t)i * 40;
+        int32_t y = 96 + (int32_t)i * 54;
         if (i + 1 < model->log_count) {
-            bar(page, 28, y + 28, 2, 22, 0x172039, 0);
+            bar(page, 28, y + 36, 2, 16, 0x172039, 0);
         }
         icon_box(page, 14, y, log_icon(entry->type), 0x172039, entry->type == WATCH_LOG_WARNING ? C_RED : C_ACCENT);
         lv_obj_t *tag = label(page, entry->tag, log_style(entry->type));
@@ -1218,7 +1467,7 @@ static void render_log_page(const watch_model_snapshot_t *model)
         lv_obj_set_pos(time, 112, y + 1);
         lv_obj_set_size(time, 76, 20);
         lv_obj_t *msg = label(page, entry->message, log_style(entry->type));
-        lv_obj_set_pos(msg, 58, y + 21);
+        lv_obj_set_pos(msg, 58, y + 24);
         lv_obj_set_size(msg, 246, 20);
     }
 }
@@ -1227,7 +1476,7 @@ static void render_all(const watch_model_snapshot_t *model)
 {
     char badge_buf[5];
 
-    lv_label_set_text(g_ui.run_label, model->warning_count > 0 ? "告知" : "运行中");
+    lv_label_set_text(g_ui.run_label, model->warning_count > 0 ? "正常" : "运行中");
     lv_obj_set_style_text_color(g_ui.run_label, color(model->warning_count > 0 ? C_YELLOW : C_MUTED), 0);
     if (g_ui.nav_badge != NULL) {
         if (model->warning_count > 0) {
@@ -1258,6 +1507,7 @@ static void render_all(const watch_model_snapshot_t *model)
         default:
             break;
     }
+    refresh_scan_modal(model);
 }
 
 static void refresh_timer_cb(lv_timer_t *timer)
